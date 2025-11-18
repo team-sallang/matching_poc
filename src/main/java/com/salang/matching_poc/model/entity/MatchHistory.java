@@ -1,7 +1,6 @@
 package com.salang.matching_poc.model.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,11 +10,8 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "match_history")
 @Getter
-@Builder
-@NoArgsConstructor // 코드 수정 필요.
-@AllArgsConstructor // 코드 수정 필요.
+@NoArgsConstructor
 public class MatchHistory {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -33,4 +29,12 @@ public class MatchHistory {
 
     @Column(name = "match_duration_ms")
     private Integer matchDurationMs;
+
+    @Builder
+    public MatchHistory(UUID userAId, UUID userBId, LocalDateTime matchedAt, Integer matchDurationMs) {
+        this.userAId = userAId;
+        this.userBId = userBId;
+        this.matchedAt = matchedAt;
+        this.matchDurationMs = matchDurationMs;
+    }
 }
