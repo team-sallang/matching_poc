@@ -19,7 +19,7 @@ scrape_configs:
     pipeline_stages:
       - json:
           expressions:
-            timestamp: timestamp
+            timestamp: "@timestamp"
             level: level
             thread: thread
             logger: logger_name

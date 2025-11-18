@@ -30,4 +30,4 @@ logging:
     name: ./logs/application.log
   level:
     root: INFO
-    "[com.salang]": DEBUG
+    com.salang.matching_poc: DEBUG
