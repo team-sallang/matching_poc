@@ -1,0 +1,101 @@
+services:
+
+  db:
+    image: 'postgres:latest'
+    container_name: salang-postgres
+    environment:
+      - 'POSTGRES_DB=mydatabase'
+      - 'POSTGRES_PASSWORD=secret'
+      - 'POSTGRES_USER=myuser'
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    ports:
+      - '5432:5432'
+    networks:
+      - app-tier
+
+
+  redis:
+    image: redis:latest
+    container_name: salang-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - app-tier
+
+  # Monitoring Stack - Prometheus + PLG (Promtail, Loki, Grafana)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: salang-prometheus
+    restart: always
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+    networks:
+      - app-tier
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: salang-promtail
+    restart: always
+    volumes:
+      - ./promtail-config.yml:/etc/promtail/config.yml
+      - ./logs:/app/logs # 로컬 logs 디렉토리 마운트
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    networks:
+      - app-tier
+
+  loki:
+    image: grafana/loki:latest
+    container_name: salang-loki
+    restart: always
+    volumes:
+      - ./loki-config.yml:/etc/loki/loki-config.yml
+      - loki-data:/loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/loki-config.yml
+    networks:
+      - app-tier
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: salang-grafana
+    restart: always
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - loki
+    networks:
+      - app-tier
+
+volumes:
+  postgres-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  loki-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  app-tier:
+    driver: bridge

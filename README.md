@@ -2,7 +2,7 @@
 
 # 1. 개요
 
-문서 목적 :
+문서 목
 
 본 문서는 Spring Boot 단일 서버 환경에서 동작하는 Redis 기반 1:1 매칭 로직의 구조 및 처리 흐름을 정의한다. 이 문서는 매칭 로직 그 자체만을 설명하며, 연결(WebRTC), 시그널링, 인증, UI 등 다른 시스템은 범위에 포함되지 않는다.
 
@@ -22,7 +22,7 @@
 - 매칭 필터가 늘어날 때 해당 구조가 유리한지 판단.
 - **1,000 VU 기준**, 처리 속도와 안정성 확인
 
-> 버전 기준 : Gradle 8.14.3 / Spring Boot 3.4.9 / Java 17
+> 버전 기준 : Gradle 8.14.3 / Spring Boot 3.4 / Java 17
 >
 > **Infra: Docker Compose + PostgreSQL(Supabase) + Redis + Prometheus + Grafana + Loki (PLG Stack)**
 
