@@ -32,7 +32,7 @@
     </root>
 
     <!-- Application Logger -->
-    <logger name="com.salang.backend" level="DEBUG"/>
+    <logger name="com.salang.matching_poc" level="DEBUG"/>
     
     <!-- Spring Framework Logger -->
     <logger name="org.springframework.web" level="INFO"/>
