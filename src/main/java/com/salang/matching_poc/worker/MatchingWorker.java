@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -142,12 +141,10 @@ public class MatchingWorker {
 
     private void saveMatchHistory(String userA, String userB) {
         try {
-            MatchHistory matchHistory = MatchHistory.builder()
-                    .userAId(UUID.fromString(userA))
-                    .userBId(UUID.fromString(userB))
-                    .matchedAt(LocalDateTime.now())
-                    .build();
+            MatchHistory matchHistory = MatchHistory.builder().userAId(UUID.fromString(userA))
+                    .userBId(UUID.fromString(userB)).build();
             matchHistoryRepository.save(matchHistory);
+            // matchedAt은 @CreationTimestamp가 자동으로 설정됨
         } catch (Exception e) {
             log.error("Failed to save match history for users {} and {}", userA, userB, e);
         }

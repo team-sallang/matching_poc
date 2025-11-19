@@ -1,5 +1,5 @@
 -- Lua Script for atomic match processing
--- Args: userA, userB, currentTimeMillis
+-- Args: userA, userB
 -- Returns: 1 if success, 0 if failed
 
 local userA = ARGV[1]

@@ -31,10 +31,10 @@ public class MatchHistory {
     private Integer matchDurationMs;
 
     @Builder
-    public MatchHistory(UUID userAId, UUID userBId, LocalDateTime matchedAt, Integer matchDurationMs) {
+    public MatchHistory(UUID userAId, UUID userBId, Integer matchDurationMs) {
         this.userAId = userAId;
         this.userBId = userBId;
-        this.matchedAt = matchedAt;
         this.matchDurationMs = matchDurationMs;
+        // matchedAt은 @CreationTimestamp가 자동으로 설정
     }
 }
