@@ -2,6 +2,8 @@ package com.salang.matching_poc.controller;
 
 import com.salang.matching_poc.model.dto.MatchHistoryResponse;
 import com.salang.matching_poc.repository.MatchHistoryRepository;
+
+import jakarta.validation.constraints.Max;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -25,7 +27,7 @@ public class HistoryController {
 
     @GetMapping
     public ResponseEntity<List<MatchHistoryResponse>> getHistory(@RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") @Max(100) int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("matchedAt").descending());
         List<MatchHistoryResponse> history = matchHistoryRepository.findAll(pageable).stream()
                 .map(MatchHistoryResponse::new).toList();
