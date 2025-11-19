@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("null") // 테스트에서 userId 변수들은 null이 아님을 보장
 class MatchingServiceTest {
 
     @Mock

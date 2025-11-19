@@ -26,6 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(QueueController.class)
 @Import({ GlobalExceptionHandler.class, QueueControllerTest.TestConfig.class })
+@SuppressWarnings("null") // 테스트에서 userId 변수들은 null이 아님을 보장
 class QueueControllerTest {
 
     @TestConfiguration
