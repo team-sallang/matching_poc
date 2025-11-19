@@ -24,7 +24,6 @@ import java.util.Objects;
 public class RedisService {
 
     private final RedisTemplate<String, String> redisTemplate;
-    @NonNull
     private DefaultRedisScript<Long> matchScript;
 
     @PostConstruct
@@ -106,6 +105,10 @@ public class RedisService {
 
     public Long getQueueLength() {
         return redisTemplate.opsForZSet().zCard(RedisKeys.MATCHING_QUEUE_KEY);
+    }
+
+    public void clearQueue() {
+        redisTemplate.delete(RedisKeys.MATCHING_QUEUE_KEY);
     }
 
     // Lua Script execution
