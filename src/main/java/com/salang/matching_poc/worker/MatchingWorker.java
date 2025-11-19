@@ -141,10 +141,15 @@ public class MatchingWorker {
 
     private void saveMatchHistory(String userA, String userB) {
         try {
-            MatchHistory matchHistory = MatchHistory.builder().userAId(UUID.fromString(userA))
-                    .userBId(UUID.fromString(userB)).build();
+            UUID userAUuid = UUID.fromString(userA);
+            UUID userBUuid = UUID.fromString(userB);
+            MatchHistory matchHistory = MatchHistory.builder().userAId(userAUuid).userBId(userBUuid).build();
             matchHistoryRepository.save(matchHistory);
+            log.debug("Saved match history for users {} and {}", userA, userB);
             // matchedAt은 @CreationTimestamp가 자동으로 설정됨
+        } catch (IllegalArgumentException e) {
+            // UUID 포맷 오류
+            log.error("Invalid UUID format for users {} and {}", userA, userB, e);
         } catch (Exception e) {
             log.error("Failed to save match history for users {} and {}", userA, userB, e);
         }
