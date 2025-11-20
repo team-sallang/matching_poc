@@ -39,7 +39,7 @@
         "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
         "targets": [
           {
-            "expr": "(rate(matching_match_success_count[1m]) / clamp_min(rate(matching_match_success_count[1m]) + rate(matching_match_fail_count[1m]), 0.0001)) * 100",
+            "expr": "(rate(matching_match_success_count_total[1m]) / clamp_min(rate(matching_match_success_count_total[1m]) + rate(matching_match_fail_count_total[1m]), 0.0001)) * 100",
             "refId": "A"
           }
         ],
@@ -66,19 +66,14 @@
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
         "targets": [
           {
-            "expr": "rate(matching_worker_tick_latency_sum[1m]) / rate(matching_worker_tick_latency_count[1m])",
+            "expr": "(rate(matching_worker_tick_latency_seconds_sum[1m]) / rate(matching_worker_tick_latency_seconds_count[1m])) * 1000",
             "refId": "A",
             "legendFormat": "Average"
           },
           {
-            "expr": "histogram_quantile(0.95, rate(matching_worker_tick_latency_bucket[1m]))",
+            "expr": "matching_worker_tick_latency_seconds_max * 1000",
             "refId": "B",
-            "legendFormat": "P95"
-          },
-          {
-            "expr": "histogram_quantile(0.99, rate(matching_worker_tick_latency_bucket[1m]))",
-            "refId": "C",
-            "legendFormat": "P99"
+            "legendFormat": "Max"
           }
         ],
         "fieldConfig": {
@@ -95,14 +90,14 @@
         "gridPos": {"h": 8, "w": 6, "x": 12, "y": 4},
         "targets": [
           {
-            "expr": "rate(matching_redis_zrange_latency_sum[1m]) / rate(matching_redis_zrange_latency_count[1m])",
+            "expr": "(rate(matching_redis_zrange_latency_seconds_sum[1m]) / rate(matching_redis_zrange_latency_seconds_count[1m])) * 1000",
             "refId": "A",
             "legendFormat": "Average"
           },
           {
-            "expr": "histogram_quantile(0.95, rate(matching_redis_zrange_latency_bucket[1m]))",
+            "expr": "matching_redis_zrange_latency_seconds_max * 1000",
             "refId": "B",
-            "legendFormat": "P95"
+            "legendFormat": "Max"
           }
         ],
         "fieldConfig": {
@@ -119,14 +114,14 @@
         "gridPos": {"h": 8, "w": 6, "x": 18, "y": 4},
         "targets": [
           {
-            "expr": "rate(matching_redis_lua_latency_sum[1m]) / rate(matching_redis_lua_latency_count[1m])",
+            "expr": "(rate(matching_redis_lua_latency_seconds_sum[1m]) / rate(matching_redis_lua_latency_seconds_count[1m])) * 1000",
             "refId": "A",
             "legendFormat": "Average"
           },
           {
-            "expr": "histogram_quantile(0.95, rate(matching_redis_lua_latency_bucket[1m]))",
+            "expr": "matching_redis_lua_latency_seconds_max * 1000",
             "refId": "B",
-            "legendFormat": "P95"
+            "legendFormat": "Max"
           }
         ],
         "fieldConfig": {
@@ -143,12 +138,12 @@
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
         "targets": [
           {
-            "expr": "rate(matching_match_success_count[1m])",
+            "expr": "rate(matching_match_success_count_total[1m])",
             "refId": "A",
             "legendFormat": "Success"
           },
           {
-            "expr": "rate(matching_match_fail_count[1m])",
+            "expr": "rate(matching_match_fail_count_total[1m])",
             "refId": "B",
             "legendFormat": "Fail"
           }
