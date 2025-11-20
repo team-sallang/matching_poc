@@ -6,6 +6,9 @@ scrape_configs:
   - job_name: "spring-boot-app"
     metrics_path: "/actuator/prometheus"
     static_configs:
-      - targets: ["host.docker.internal:8080"] # Windows/Mac // linux에서는 IP 주소를 따로 설정해야 함.
+      - targets: ["host.docker.internal:8080"] # Windows/Mac에서 사용
+        # Linux에서는 다음 중 하나를 사용:
+        # 1. host.docker.internal 대신 호스트 IP 주소 사용 (예: "172.17.0.1:8080")
+        # 2. 또는 Docker 네트워크 모드 host 사용
         labels:
           application: "salang-backend"
