@@ -4,6 +4,10 @@ import com.salang.matching_poc.model.entity.MatchHistory;
 import com.salang.matching_poc.model.enums.Status;
 import com.salang.matching_poc.repository.MatchHistoryRepository;
 import com.salang.matching_poc.service.RedisService;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
@@ -24,12 +29,37 @@ public class MatchingWorker {
 
     private final RedisService redisService;
     private final MatchHistoryRepository matchHistoryRepository;
+    private final MeterRegistry meterRegistry;
 
     private Thread workerThread;
     private volatile boolean running = false;
+    
+    // 메트릭
+    private Timer workerTickLatencyTimer;
+    private Counter matchSuccessCount;
+    private Counter matchFailCount;
+    private Gauge matchQueueLengthGauge;
 
     @PostConstruct
     public void start() {
+        // 메트릭 초기화
+        workerTickLatencyTimer = Timer.builder("matching_worker_tick_latency")
+                .description("Worker 1 루프(50ms tick) 수행 시간")
+                .register(meterRegistry);
+        
+        matchSuccessCount = Counter.builder("matching_match_success_count")
+                .description("매칭 성공 횟수")
+                .register(meterRegistry);
+        
+        matchFailCount = Counter.builder("matching_match_fail_count")
+                .description("매칭 실패 횟수")
+                .register(meterRegistry);
+        
+        matchQueueLengthGauge = Gauge.builder("matching_match_queue_length", 
+                () -> redisService.getQueueLength() != null ? redisService.getQueueLength().doubleValue() : 0.0)
+                .description("Redis ZSET의 현재 큐 길이")
+                .register(meterRegistry);
+        
         running = true;
         workerThread = new Thread(this::run, "MatchingWorker");
         workerThread.setDaemon(true);
@@ -53,16 +83,20 @@ public class MatchingWorker {
 
     private void run() {
         while (running && !Thread.currentThread().isInterrupted()) {
-            long startTime = System.currentTimeMillis();
+            long startTime = System.nanoTime();
             try {
                 processMatching();
             } catch (Exception e) {
                 log.error("Error in matching worker tick", e);
+            } finally {
+                // Worker tick latency 측정
+                long elapsed = System.nanoTime() - startTime;
+                workerTickLatencyTimer.record(elapsed, TimeUnit.NANOSECONDS);
             }
 
             // 50ms 간격 유지
-            long elapsed = System.currentTimeMillis() - startTime;
-            long sleepTime = Math.max(0, TICK_INTERVAL_MS - elapsed);
+            long elapsedMs = (System.nanoTime() - startTime) / 1_000_000;
+            long sleepTime = Math.max(0, TICK_INTERVAL_MS - elapsedMs);
             if (sleepTime > 0) {
                 try {
                     Thread.sleep(sleepTime);
@@ -78,9 +112,12 @@ public class MatchingWorker {
         // Step 1: Top-50 후보 조회
         List<String> candidates = redisService.getTopCandidates(TOP_CANDIDATES_COUNT);
         if (candidates.isEmpty()) {
+            matchFailCount.increment();
             return;
         }
 
+        boolean matched = false;
+        
         // Step 2: 후보 필터링 및 매칭 시도
         for (int i = 0; i < candidates.size(); i++) {
             String userA = candidates.get(i);
@@ -125,12 +162,19 @@ public class MatchingWorker {
                 if (result != null && result == 1L) {
                     // 매칭 성공
                     log.info("Matched users: {} and {}", userA, userB);
+                    matchSuccessCount.increment();
+                    matched = true;
 
                     // Step 5: Postgres에 매칭 이력 저장
                     saveMatchHistory(userA, userB);
                     return; // 이번 tick에서 한 쌍만 매칭
                 }
             }
+        }
+        
+        // 매칭 실패 (후보는 있지만 조건 불충족)
+        if (!matched) {
+            matchFailCount.increment();
         }
     }
 
