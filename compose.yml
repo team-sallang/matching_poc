@@ -96,8 +96,12 @@ services:
       - ./scripts/k6:/scripts
     networks:
       - app-tier
-    # 실행: docker compose run --rm k6 run /scripts/matching.js
-    # 또는 환경변수와 함께: docker compose run --rm -e VU=1000 -e DURATION=5m k6 run /scripts/matching.js
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Windows/Mac에서 호스트 접근
+    # 실행: make test 또는 docker compose run --rm k6 run /scripts/matching.js
+    # .env 파일이 있으면 자동으로 환경변수 로드됨
 
 volumes:
   postgres-data:
