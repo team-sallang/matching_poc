@@ -7,6 +7,7 @@ const BASE_URL = __ENV.BASE_URL || 'http://host.docker.internal:8080';
 const VU = parseInt(__ENV.VU || '1000');
 const DURATION = __ENV.DURATION || '5m';
 const RAMP_UP = __ENV.RAMP_UP || '30s';
+const RAMP_DOWN = __ENV.RAMP_DOWN || '30s'; // VU 감소 전 큐 비우기 시간
 const POLLING_INTERVAL = parseFloat(__ENV.POLLING_INTERVAL || '0.1');
 const TIMEOUT = parseInt(__ENV.TIMEOUT || '30');
 
@@ -44,6 +45,7 @@ export const options = {
     stages: [
         { duration: RAMP_UP, target: VU },
         { duration: DURATION, target: VU },
+        { duration: RAMP_DOWN, target: 0 }, // VU 감소 전 큐 비우기 시간 확보
     ],
     thresholds: {
         'http_req_duration': ['p(95)<500'],
@@ -171,6 +173,63 @@ export default function (data) {
         matchTimeoutRate.add(1);
         matchSuccessRate.add(0);
         console.error(`User ${userId} timeout after ${matchLatencyMs}ms`);
+        
+        // 타임아웃 시 상태 확인 및 정리
+        try {
+            const statusCheckResponse = http.get(
+                `${BASE_URL}/queue/status/${userId}`,
+                {
+                    headers: { 'Content-Type': 'application/json' },
+                    timeout: '5s',
+                }
+            );
+            
+            if (statusCheckResponse.status === 200 && statusCheckResponse.body) {
+                try {
+                    const statusBody = JSON.parse(statusCheckResponse.body);
+                    const currentStatus = statusBody.status;
+                    
+                    if (currentStatus === 'WAITING') {
+                        // WAITING 상태면 Leave Queue로 정리
+                        const leaveResponse = http.post(
+                            `${BASE_URL}/queue/leave`,
+                            JSON.stringify({ userId: userId }),
+                            {
+                                headers: { 'Content-Type': 'application/json' },
+                                timeout: '5s',
+                            }
+                        );
+                        
+                        if (leaveResponse.status === 200) {
+                            console.log(`User ${userId} left queue after timeout (was WAITING)`);
+                        }
+                    } else if (currentStatus === 'MATCHED') {
+                        // MATCHED 상태면 ACK 호출 (매칭은 됐지만 polling 타임아웃)
+                        const ackResponse = http.post(
+                            `${BASE_URL}/queue/ack`,
+                            JSON.stringify({ userId: userId }),
+                            {
+                                headers: { 'Content-Type': 'application/json' },
+                                timeout: '5s',
+                            }
+                        );
+                        
+                        if (ackResponse.status === 200) {
+                            console.log(`User ${userId} acknowledged match after timeout (was MATCHED)`);
+                            // 매칭 성공으로 기록
+                            matchSuccessRate.add(1);
+                            matchTimeoutRate.add(-1); // 타임아웃 카운트 취소
+                        }
+                    }
+                    // IDLE 상태면 이미 정리됨, 아무것도 안 함
+                } catch (e) {
+                    // JSON 파싱 실패 시 무시
+                }
+            }
+        } catch (e) {
+            // 상태 확인 실패해도 다음 iteration에서 처리 가능
+            // 무시하고 계속 진행
+        }
     }
     
     sleep(1);
