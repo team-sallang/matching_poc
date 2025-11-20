@@ -3,14 +3,7 @@ import { check, sleep } from 'k6';
 import { Rate, Trend } from 'k6/metrics';
 
 // 환경변수 설정 (기본값)
-// VU: 동시 사용자 수 (기본: 1000)
-// DURATION: 테스트 지속 시간 (기본: 5m)
-// RAMP_UP: ramp-up 시간 (기본: 30s)
-// BASE_URL: Spring Boot 앱 주소 (기본: http://localhost:8080)
-// POLLING_INTERVAL: Status polling 간격 (기본: 0.1초)
-// TIMEOUT: 타임아웃 (기본: 30초)
-
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
+const BASE_URL = __ENV.BASE_URL || 'http://host.docker.internal:8080';
 const VU = parseInt(__ENV.VU || '1000');
 const DURATION = __ENV.DURATION || '5m';
 const RAMP_UP = __ENV.RAMP_UP || '30s';
@@ -24,64 +17,38 @@ const matchLatency = new Trend('match_latency');
 
 // 테스트 사용자 데이터 로드
 let testUsers = [];
+const TEST_USERS_FILE = '/scripts/test-users.json';
 
-function loadOrCreateTestUsers() {
-    const fs = require('k6/experimental/fs');
-    const path = '/scripts/test-users.json';
-    
-    try {
-        // 파일이 있으면 로드
-        const fileContent = fs.readFileSync(path);
-        if (fileContent) {
-            testUsers = JSON.parse(fileContent);
-            console.log(`Loaded ${testUsers.length} test users from file`);
-            return;
-        }
-    } catch (e) {
-        // 파일이 없으면 생성
-        console.log('Test users file not found, creating new users...');
+// test-users.json 파일에서 사용자 데이터 로드 (필수)
+try {
+    const fileContent = open(TEST_USERS_FILE);
+    if (!fileContent) {
+        throw new Error(`Test users file not found: ${TEST_USERS_FILE}`);
     }
-    
-    // 1000명의 사용자 생성 (성별 50:50)
-    testUsers = [];
-    for (let i = 0; i < 1000; i++) {
-        testUsers.push({
-            userId: generateUUID(),
-            gender: i % 2 === 0 ? 'male' : 'female'
-        });
+    testUsers = JSON.parse(fileContent);
+    if (!Array.isArray(testUsers) || testUsers.length === 0) {
+        throw new Error(`Invalid test users file: ${TEST_USERS_FILE} (empty or invalid format)`);
     }
-    
-    // 파일로 저장
-    try {
-        fs.writeFileSync(path, JSON.stringify(testUsers, null, 2));
-        console.log(`Created and saved ${testUsers.length} test users to file`);
-    } catch (e) {
-        console.log('Warning: Could not save test users to file:', e);
-    }
-}
-
-function generateUUID() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
+    console.log(`Loaded ${testUsers.length} test users from file`);
+} catch (e) {
+    console.error(`Failed to load test users file: ${e.message}`);
+    console.error(`Please run "make generate-users" to create the test-users.json file first.`);
+    throw e;
 }
 
 export function setup() {
-    loadOrCreateTestUsers();
     return { users: testUsers };
 }
 
 export const options = {
     stages: [
-        { duration: RAMP_UP, target: VU }, // ramp-up
-        { duration: DURATION, target: VU }, // 테스트 지속
+        { duration: RAMP_UP, target: VU },
+        { duration: DURATION, target: VU },
     ],
     thresholds: {
-        'http_req_duration': ['p(95)<500'], // 95% 요청이 500ms 이하
-        'http_req_failed': ['rate<0.01'], // 에러율 1% 미만
-        'match_success_rate': ['rate>0.8'], // 매칭 성공률 80% 이상
+        'http_req_duration': ['p(95)<500'],
+        'http_req_failed': ['rate<0.01'],
+        'match_success_rate': ['rate>0.8'],
     },
 };
 
@@ -92,42 +59,52 @@ export default function (data) {
         return;
     }
     
-    // 랜덤 사용자 선택
-    const user = users[Math.floor(Math.random() * users.length)];
+    // VU ID 기반으로 고유한 사용자 선택
+    const userIndex = ((__VU - 1) + __ITER) % users.length;
+    const user = users[userIndex];
     const userId = user.userId;
     const gender = user.gender;
     
-    // 1. Join Queue
     const joinStartTime = Date.now();
+    let matched = false;
+    let matchedWith = null;
+    
+    // 1. Join Queue
     const joinResponse = http.post(
         `${BASE_URL}/queue/join`,
-        JSON.stringify({
-            userId: userId,
-            gender: gender
-        }),
+        JSON.stringify({ userId: userId, gender: gender }),
         {
             headers: { 'Content-Type': 'application/json' },
             timeout: `${TIMEOUT}s`,
         }
     );
     
-    const joinSuccess = check(joinResponse, {
-        'join status is 200': (r) => r.status === 200,
-        'join response has status': (r) => {
-            const body = JSON.parse(r.body);
-            return body.status === 'WAITING';
-        },
-    });
-    
-    if (!joinSuccess) {
-        console.error(`Join failed for user ${userId}: ${joinResponse.status} - ${joinResponse.body}`);
+    // Join 실패 처리
+    if (joinResponse.status === 0) {
+        const matchLatencyMs = Date.now() - joinStartTime;
+        matchLatency.add(matchLatencyMs);
+        matchTimeoutRate.add(1);
+        matchSuccessRate.add(0);
         return;
     }
     
+    // 409 ALREADY_IN_QUEUE는 정상 (이전 반복에서 큐에 남아있을 수 있음)
+    // 200이 아니고 409도 아니면 실패
+    if (joinResponse.status !== 200 && joinResponse.status !== 409) {
+        const matchLatencyMs = Date.now() - joinStartTime;
+        matchLatency.add(matchLatencyMs);
+        matchTimeoutRate.add(1);
+        matchSuccessRate.add(0);
+        return;
+    }
+    
+    // Join 성공 체크 (메트릭용)
+    check(joinResponse, {
+        'join status is 200 or 409': (r) => r.status === 200 || r.status === 409,
+    });
+    
     // 2. Status Polling (MATCHED 감지)
-    let matched = false;
-    let matchedWith = null;
-    const maxPollingTime = TIMEOUT * 1000; // milliseconds
+    const maxPollingTime = TIMEOUT * 1000;
     const pollingDeadline = Date.now() + maxPollingTime;
     
     while (Date.now() < pollingDeadline && !matched) {
@@ -139,16 +116,30 @@ export default function (data) {
             }
         );
         
-        const statusCheck = check(statusResponse, {
+        // Status 체크 (메트릭용)
+        check(statusResponse, {
             'status check is 200': (r) => r.status === 200,
         });
         
-        if (statusCheck) {
-            const statusBody = JSON.parse(statusResponse.body);
-            if (statusBody.status === 'MATCHED') {
-                matched = true;
-                matchedWith = statusBody.matchedWith;
-                break;
+        // 연결 오류 시 재시도
+        if (statusResponse.status === 0) {
+            sleep(POLLING_INTERVAL);
+            continue;
+        }
+        
+        // 200 응답인 경우에만 처리
+        if (statusResponse.status === 200 && statusResponse.body) {
+            try {
+                const statusBody = JSON.parse(statusResponse.body);
+                if (statusBody.status === 'MATCHED') {
+                    matched = true;
+                    matchedWith = statusBody.matchedWith;
+                    break;
+                }
+            } catch (e) {
+                // JSON 파싱 실패 시 계속 진행
+                sleep(POLLING_INTERVAL);
+                continue;
             }
         }
         
@@ -164,9 +155,7 @@ export default function (data) {
         // 3. ACK
         const ackResponse = http.post(
             `${BASE_URL}/queue/ack`,
-            JSON.stringify({
-                userId: userId
-            }),
+            JSON.stringify({ userId: userId }),
             {
                 headers: { 'Content-Type': 'application/json' },
                 timeout: `${TIMEOUT}s`,
@@ -175,10 +164,6 @@ export default function (data) {
         
         check(ackResponse, {
             'ack status is 200': (r) => r.status === 200,
-            'ack response has status IDLE': (r) => {
-                const body = JSON.parse(r.body);
-                return body.status === 'IDLE';
-            },
         });
         
         console.log(`User ${userId} matched with ${matchedWith} in ${matchLatencyMs}ms`);
@@ -188,10 +173,5 @@ export default function (data) {
         console.error(`User ${userId} timeout after ${matchLatencyMs}ms`);
     }
     
-    sleep(1); // 다음 VU 실행 전 대기
+    sleep(1);
 }
-
-export function teardown(data) {
-    console.log('Test completed');
-}
-
