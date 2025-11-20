@@ -137,7 +137,7 @@ public class MatchingWorker {
                 continue;
             }
 
-            // Step 3: 매칭 조건 검사 (성별 동일)
+            // Step 3: 매칭 조건 검사 (성별이 다르면 매칭: 남자-여자)
             for (int j = i + 1; j < candidates.size(); j++) {
                 String userB = candidates.get(j);
 
@@ -154,9 +154,9 @@ public class MatchingWorker {
                     continue;
                 }
 
-                // 성별 동일 조건 확인
-                if (!genderA.equals(genderB)) {
-                    continue;
+                // 성별이 다르면 매칭 (남자-여자)
+                if (genderA.equals(genderB)) {
+                    continue; // 성별이 같으면 스킵
                 }
 
                 // Step 4: Lua Script로 atomic match
