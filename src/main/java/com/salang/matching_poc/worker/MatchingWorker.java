@@ -25,7 +25,8 @@ public class MatchingWorker {
 
     private static final long TICK_INTERVAL_MS = 50L; // 50ms
     private static final int TOP_CANDIDATES_COUNT = 50;
-    private static final long MATCH_TIMEOUT_MS = 30_000L; // 30초 - 매칭 불가능한 사용자 자동 제거
+    private static final int MAX_MATCHES_PER_TICK = 10; // 한 tick에서 최대 매칭 수
+    private static final long MATCH_TIMEOUT_MS = 20_000L; // 20초 - 매칭 불가능한 사용자 자동 제거 (k6 TIMEOUT보다 짧게)
     private static final String WAITING_STATUS = Status.WAITING.name();
 
     private final RedisService redisService;
@@ -119,10 +120,10 @@ public class MatchingWorker {
             return;
         }
 
-        boolean matched = false;
+        int matchCount = 0;
 
-        // Step 2: 후보 필터링 및 매칭 시도
-        for (int i = 0; i < candidates.size(); i++) {
+        // Step 2: 후보 필터링 및 매칭 시도 (한 tick에서 여러 쌍 매칭)
+        for (int i = 0; i < candidates.size() && matchCount < MAX_MATCHES_PER_TICK; i++) {
             String userA = candidates.get(i);
 
             // 자기 자신 제외, WAITING 상태 확인
@@ -139,7 +140,7 @@ public class MatchingWorker {
             }
 
             // Step 3: 매칭 조건 검사 (성별이 다르면 매칭: 남자-여자)
-            for (int j = i + 1; j < candidates.size(); j++) {
+            for (int j = i + 1; j < candidates.size() && matchCount < MAX_MATCHES_PER_TICK; j++) {
                 String userB = candidates.get(j);
 
                 // 자기 자신 제외, WAITING 상태 확인
@@ -171,22 +172,23 @@ public class MatchingWorker {
                     // 매칭 성공
                     log.info("Matched users: {} and {}", userA, userB);
                     matchSuccessCount.increment();
-                    matched = true;
+                    matchCount++;
 
                     // Step 5: Postgres에 매칭 이력 저장
                     saveMatchHistory(userA, userB);
-                    return; // 이번 tick에서 한 쌍만 매칭
+                    break; // 이번 userA에 대한 매칭 완료, 다음 userA로
                 }
             }
         }
 
         // 매칭 실패 (후보는 있지만 조건 불충족)
-        if (!matched) {
+        if (matchCount == 0) {
             matchFailCount.increment();
-
-            // 타임아웃된 사용자 자동 제거 (일정 시간 동안 매칭되지 못한 사용자)
-            cleanupTimeoutUsers(candidates);
         }
+
+        // 타임아웃된 사용자 자동 제거 (매칭 성공/실패와 관계없이 항상 실행)
+        // 성별 불균형 등으로 인해 매칭 불가능한 사용자를 정리
+        cleanupTimeoutUsers(candidates);
     }
 
     /**
