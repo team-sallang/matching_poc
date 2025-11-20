@@ -25,6 +25,7 @@ public class MatchingWorker {
 
     private static final long TICK_INTERVAL_MS = 50L; // 50ms
     private static final int TOP_CANDIDATES_COUNT = 50;
+    private static final long MATCH_TIMEOUT_MS = 30_000L; // 30초 - 매칭 불가능한 사용자 자동 제거
     private static final String WAITING_STATUS = Status.WAITING.name();
 
     private final RedisService redisService;
@@ -182,6 +183,40 @@ public class MatchingWorker {
         // 매칭 실패 (후보는 있지만 조건 불충족)
         if (!matched) {
             matchFailCount.increment();
+
+            // 타임아웃된 사용자 자동 제거 (일정 시간 동안 매칭되지 못한 사용자)
+            cleanupTimeoutUsers(candidates);
+        }
+    }
+
+    /**
+     * 일정 시간 동안 매칭되지 못한 사용자를 큐에서 자동으로 제거
+     * 성별 불균형 등으로 인해 매칭 불가능한 사용자를 정리
+     */
+    @SuppressWarnings("null") // userId는 candidates 리스트에서 가져온 것이므로 null이 아님
+    private void cleanupTimeoutUsers(List<String> candidates) {
+        long now = System.currentTimeMillis();
+
+        for (String userId : candidates) {
+            // WAITING 상태인 사용자만 확인
+            if (!isWaiting(userId)) {
+                continue;
+            }
+
+            // lastJoinAt 확인
+            Long lastJoinAt = redisService.getLastJoinAt(userId);
+            if (lastJoinAt == null) {
+                continue;
+            }
+
+            // 타임아웃된 사용자 (30초 이상 대기)
+            long waitingTime = now - lastJoinAt;
+            if (waitingTime >= MATCH_TIMEOUT_MS) {
+                // 큐에서 제거하고 상태를 IDLE로 변경
+                redisService.removeFromQueue(userId);
+                redisService.setStatus(userId, Status.IDLE.name());
+                log.warn("Auto-removed timeout user from queue: {} (waited {}ms)", userId, waitingTime);
+            }
         }
     }
 
