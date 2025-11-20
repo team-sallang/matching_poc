@@ -1,7 +1,6 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { Counter, Rate, Trend } from 'k6/metrics';
-import { SharedArray } from 'k6/data';
+import { Rate, Trend } from 'k6/metrics';
 
 // 환경변수 설정 (기본값)
 // VU: 동시 사용자 수 (기본: 1000)
@@ -126,7 +125,6 @@ export default function (data) {
     }
     
     // 2. Status Polling (MATCHED 감지)
-    const pollingStartTime = Date.now();
     let matched = false;
     let matchedWith = null;
     const maxPollingTime = TIMEOUT * 1000; // milliseconds
