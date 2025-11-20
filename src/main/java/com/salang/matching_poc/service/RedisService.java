@@ -1,10 +1,12 @@
 package com.salang.matching_poc.service;
 
 import com.salang.matching_poc.model.RedisKeys;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
@@ -23,8 +25,12 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class RedisService {
 
-    private final RedisTemplate<String, String> redisTemplate;
+    private final StringRedisTemplate redisTemplate;
+    private final MeterRegistry meterRegistry;
     private DefaultRedisScript<Long> matchScript;
+
+    private Timer redisZrangeLatencyTimer;
+    private Timer redisLuaLatencyTimer;
 
     @PostConstruct
     public void init() {
@@ -32,12 +38,25 @@ public class RedisService {
             ClassPathResource resource = new ClassPathResource("match.lua");
             java.nio.charset.Charset charset = Objects.requireNonNull(StandardCharsets.UTF_8);
             String script = StreamUtils.copyToString(resource.getInputStream(), charset);
-            matchScript = new DefaultRedisScript<>(script, Long.class);
+            // Suppress warning: DefaultRedisScript implements RedisScript and is safe to
+            // use
+            @SuppressWarnings("null")
+            DefaultRedisScript<Long> scriptObj = new DefaultRedisScript<>(script, Long.class);
+            matchScript = scriptObj;
             log.info("Lua script loaded successfully");
         } catch (Exception e) {
             log.error("Failed to load Lua script", e);
             throw new RuntimeException("Failed to load Lua script", e);
         }
+
+        // 메트릭 초기화
+        redisZrangeLatencyTimer = Timer.builder("matching_redis_zrange_latency")
+                .description("Top-50 조회(ZRANGE) 수행 시간")
+                .register(meterRegistry);
+
+        redisLuaLatencyTimer = Timer.builder("matching_redis_lua_latency")
+                .description("atomic match Lua Script 실행 시간")
+                .register(meterRegistry);
     }
 
     // String operations - Status
@@ -91,8 +110,15 @@ public class RedisService {
     }
 
     public List<String> getTopCandidates(int count) {
-        Set<String> candidates = redisTemplate.opsForZSet().range(RedisKeys.MATCHING_QUEUE_KEY, 0, count - 1);
-        return candidates != null ? List.copyOf(candidates) : Collections.emptyList();
+        try {
+            return redisZrangeLatencyTimer.recordCallable(() -> {
+                Set<String> candidates = redisTemplate.opsForZSet().range(RedisKeys.MATCHING_QUEUE_KEY, 0, count - 1);
+                return candidates != null ? List.copyOf(candidates) : Collections.emptyList();
+            });
+        } catch (Exception e) {
+            log.error("Error in getTopCandidates", e);
+            return Collections.emptyList();
+        }
     }
 
     public void removeFromQueue(@NonNull String userId) {
@@ -112,8 +138,18 @@ public class RedisService {
     }
 
     // Lua Script execution
+    // Note: match.lua uses ARGV only, not KEYS, so we pass an empty keys list
+    @SuppressWarnings("null") // matchScript와 keys는 null이 아니며, Spring RedisTemplate이 안전하게 처리
     public Long executeMatchScript(@NonNull String userA, @NonNull String userB) {
-        List<String> keys = Objects.requireNonNull(List.of());
-        return redisTemplate.execute(matchScript, keys, userA, userB);
+        try {
+            return redisLuaLatencyTimer.recordCallable(() -> {
+                // Lua script uses ARGV[1] and ARGV[2] for userA and userB, not KEYS
+                List<String> keys = Collections.emptyList();
+                return redisTemplate.execute(matchScript, keys, userA, userB);
+            });
+        } catch (Exception e) {
+            log.error("Error in executeMatchScript", e);
+            return null;
+        }
     }
 }

@@ -25,11 +25,13 @@ public class MatchingService {
     private final RedisService redisService;
 
     @Transactional
+    @SuppressWarnings("null") // userId와 gender는 null이 아니며, toString()과 request에서 검증된 값
     public JoinQueueResponse joinQueue(JoinQueueRequest request) {
         String userId = request.getUserId().toString();
         String gender = request.getGender();
 
         // 상태 확인
+        @SuppressWarnings("null") // null 체크 후 사용
         String currentStatus = redisService.getStatus(userId);
         if (currentStatus != null && (WAITING_STATUS.equals(currentStatus) || MATCHED_STATUS.equals(currentStatus))) {
             throw new AlreadyInQueueException();
@@ -43,12 +45,19 @@ public class MatchingService {
         }
 
         // 상태 등록
-        redisService.setStatus(userId, WAITING_STATUS);
-        redisService.setLastJoinAt(userId, now);
-        redisService.setGender(userId, gender);
+        // userId와 gender는 null이 아니며, toString()과 request에서 검증된 값
+        @SuppressWarnings("null")
+        String userIdForRedis = userId;
+        @SuppressWarnings("null")
+        String genderForRedis = gender;
+        redisService.setStatus(userIdForRedis, WAITING_STATUS);
+        redisService.setLastJoinAt(userIdForRedis, now);
+        redisService.setGender(userIdForRedis, genderForRedis);
 
         // 대기열 등록 (ZADD matching:queue score=now value=userId)
-        redisService.addToQueue(userId, now);
+        @SuppressWarnings("null")
+        String userIdForQueue = userId;
+        redisService.addToQueue(userIdForQueue, now);
 
         log.debug("User {} joined queue with gender {}", userId, gender);
         return JoinQueueResponse.builder()
@@ -57,21 +66,26 @@ public class MatchingService {
     }
 
     @Transactional
+    @SuppressWarnings("null") // userId는 toString() 결과이므로 null이 아님
     public LeaveQueueResponse leaveQueue(LeaveQueueRequest request) {
         String userId = request.getUserId().toString();
 
         // MATCHED 상태인 경우 Leave 불가
+        @SuppressWarnings("null") // null 체크 후 사용
         String currentStatus = redisService.getStatus(userId);
         if (MATCHED_STATUS.equals(currentStatus)) {
             throw new CannotLeaveMatchedException();
         }
 
         // 큐에서 제거
-        redisService.removeFromQueue(userId);
+        // userId는 toString() 결과이므로 null이 아님
+        @SuppressWarnings("null")
+        String userIdForRedis = userId;
+        redisService.removeFromQueue(userIdForRedis);
         // 상태를 IDLE로 변경
-        redisService.setStatus(userId, IDLE_STATUS);
+        redisService.setStatus(userIdForRedis, IDLE_STATUS);
         // matchedWith 삭제 (있을 경우)
-        redisService.deleteMatchedWith(userId);
+        redisService.deleteMatchedWith(userIdForRedis);
 
         log.debug("User {} left queue", userId);
         return LeaveQueueResponse.builder()
@@ -81,6 +95,7 @@ public class MatchingService {
 
     public StatusResponse getStatus(UUID userId) {
         String userIdStr = userId.toString();
+        @SuppressWarnings("null") // null 체크 후 사용
         String status = redisService.getStatus(userIdStr);
 
         // 상태가 없으면 IDLE로 간주
@@ -93,6 +108,7 @@ public class MatchingService {
 
         // MATCHED 상태일 때만 matchedWith 포함
         if (MATCHED_STATUS.equals(status)) {
+            @SuppressWarnings("null") // null 체크 후 사용
             String matchedWith = redisService.getMatchedWith(userIdStr);
             if (matchedWith != null) {
                 builder.matchedWith(UUID.fromString(matchedWith));
@@ -103,13 +119,17 @@ public class MatchingService {
     }
 
     @Transactional
+    @SuppressWarnings("null") // userId는 toString() 결과이므로 null이 아님
     public AckResponse acknowledgeMatch(AckRequest request) {
         String userId = request.getUserId().toString();
 
         // 상태를 IDLE로 변경
-        redisService.setStatus(userId, IDLE_STATUS);
+        // userId는 toString() 결과이므로 null이 아님
+        @SuppressWarnings("null")
+        String userIdForRedis = userId;
+        redisService.setStatus(userIdForRedis, IDLE_STATUS);
         // matchedWith 삭제
-        redisService.deleteMatchedWith(userId);
+        redisService.deleteMatchedWith(userIdForRedis);
 
         log.debug("User {} acknowledged match", userId);
         return AckResponse.builder()
