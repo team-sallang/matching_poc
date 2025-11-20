@@ -38,7 +38,11 @@ public class RedisService {
             ClassPathResource resource = new ClassPathResource("match.lua");
             java.nio.charset.Charset charset = Objects.requireNonNull(StandardCharsets.UTF_8);
             String script = StreamUtils.copyToString(resource.getInputStream(), charset);
-            matchScript = new DefaultRedisScript<>(script, Long.class);
+            // Suppress warning: DefaultRedisScript implements RedisScript and is safe to
+            // use
+            @SuppressWarnings("null")
+            DefaultRedisScript<Long> scriptObj = new DefaultRedisScript<>(script, Long.class);
+            matchScript = scriptObj;
             log.info("Lua script loaded successfully");
         } catch (Exception e) {
             log.error("Failed to load Lua script", e);
@@ -134,10 +138,13 @@ public class RedisService {
     }
 
     // Lua Script execution
+    // Note: match.lua uses ARGV only, not KEYS, so we pass an empty keys list
+    @SuppressWarnings("null") // matchScript와 keys는 null이 아니며, Spring RedisTemplate이 안전하게 처리
     public Long executeMatchScript(@NonNull String userA, @NonNull String userB) {
         try {
             return redisLuaLatencyTimer.recordCallable(() -> {
-                List<String> keys = Objects.requireNonNull(List.of());
+                // Lua script uses ARGV[1] and ARGV[2] for userA and userB, not KEYS
+                List<String> keys = Collections.emptyList();
                 return redisTemplate.execute(matchScript, keys, userA, userB);
             });
         } catch (Exception e) {

@@ -33,11 +33,12 @@ public class MatchingWorker {
 
     private Thread workerThread;
     private volatile boolean running = false;
-    
+
     // 메트릭
     private Timer workerTickLatencyTimer;
     private Counter matchSuccessCount;
     private Counter matchFailCount;
+    @SuppressWarnings("unused") // Gauge는 자동으로 메트릭에 등록되므로 사용되지 않는다는 경고 무시
     private Gauge matchQueueLengthGauge;
 
     @PostConstruct
@@ -46,20 +47,20 @@ public class MatchingWorker {
         workerTickLatencyTimer = Timer.builder("matching_worker_tick_latency")
                 .description("Worker 1 루프(50ms tick) 수행 시간")
                 .register(meterRegistry);
-        
+
         matchSuccessCount = Counter.builder("matching_match_success_count")
                 .description("매칭 성공 횟수")
                 .register(meterRegistry);
-        
+
         matchFailCount = Counter.builder("matching_match_fail_count")
                 .description("매칭 실패 횟수")
                 .register(meterRegistry);
-        
-        matchQueueLengthGauge = Gauge.builder("matching_match_queue_length", 
+
+        matchQueueLengthGauge = Gauge.builder("matching_match_queue_length",
                 () -> redisService.getQueueLength() != null ? redisService.getQueueLength().doubleValue() : 0.0)
                 .description("Redis ZSET의 현재 큐 길이")
                 .register(meterRegistry);
-        
+
         running = true;
         workerThread = new Thread(this::run, "MatchingWorker");
         workerThread.setDaemon(true);
@@ -108,6 +109,7 @@ public class MatchingWorker {
         }
     }
 
+    @SuppressWarnings("null") // userA와 userB는 null 체크 후 사용
     private void processMatching() {
         // Step 1: Top-50 후보 조회
         List<String> candidates = redisService.getTopCandidates(TOP_CANDIDATES_COUNT);
@@ -117,7 +119,7 @@ public class MatchingWorker {
         }
 
         boolean matched = false;
-        
+
         // Step 2: 후보 필터링 및 매칭 시도
         for (int i = 0; i < candidates.size(); i++) {
             String userA = candidates.get(i);
@@ -158,7 +160,12 @@ public class MatchingWorker {
                 }
 
                 // Step 4: Lua Script로 atomic match
-                Long result = redisService.executeMatchScript(userA, userB);
+                // userA와 userB는 null 체크 후 사용
+                @SuppressWarnings("null")
+                String userAForScript = userA;
+                @SuppressWarnings("null")
+                String userBForScript = userB;
+                Long result = redisService.executeMatchScript(userAForScript, userBForScript);
                 if (result != null && result == 1L) {
                     // 매칭 성공
                     log.info("Matched users: {} and {}", userA, userB);
@@ -171,7 +178,7 @@ public class MatchingWorker {
                 }
             }
         }
-        
+
         // 매칭 실패 (후보는 있지만 조건 불충족)
         if (!matched) {
             matchFailCount.increment();
@@ -179,14 +186,18 @@ public class MatchingWorker {
     }
 
     private boolean isWaiting(String userId) {
+        @SuppressWarnings("null") // null 체크 후 사용 (WAITING_STATUS.equals가 null-safe)
         String status = redisService.getStatus(userId);
         return WAITING_STATUS.equals(status);
     }
 
+    @SuppressWarnings("null") // builder().build()는 null을 반환하지 않음
     private void saveMatchHistory(String userA, String userB) {
         try {
             UUID userAUuid = UUID.fromString(userA);
             UUID userBUuid = UUID.fromString(userB);
+            // builder().build()는 null을 반환하지 않음
+            @SuppressWarnings("null")
             MatchHistory matchHistory = MatchHistory.builder().userAId(userAUuid).userBId(userBUuid).build();
             matchHistoryRepository.save(matchHistory);
             log.debug("Saved match history for users {} and {}", userA, userB);
