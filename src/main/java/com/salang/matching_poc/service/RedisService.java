@@ -1,6 +1,8 @@
 package com.salang.matching_poc.service;
 
 import com.salang.matching_poc.model.RedisKeys;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
@@ -24,7 +26,11 @@ import java.util.Objects;
 public class RedisService {
 
     private final RedisTemplate<String, String> redisTemplate;
+    private final MeterRegistry meterRegistry;
     private DefaultRedisScript<Long> matchScript;
+
+    private Timer redisZrangeLatencyTimer;
+    private Timer redisLuaLatencyTimer;
 
     @PostConstruct
     public void init() {
@@ -38,6 +44,15 @@ public class RedisService {
             log.error("Failed to load Lua script", e);
             throw new RuntimeException("Failed to load Lua script", e);
         }
+
+        // 메트릭 초기화
+        redisZrangeLatencyTimer = Timer.builder("matching_redis_zrange_latency")
+                .description("Top-50 조회(ZRANGE) 수행 시간")
+                .register(meterRegistry);
+
+        redisLuaLatencyTimer = Timer.builder("matching_redis_lua_latency")
+                .description("atomic match Lua Script 실행 시간")
+                .register(meterRegistry);
     }
 
     // String operations - Status
@@ -91,8 +106,10 @@ public class RedisService {
     }
 
     public List<String> getTopCandidates(int count) {
-        Set<String> candidates = redisTemplate.opsForZSet().range(RedisKeys.MATCHING_QUEUE_KEY, 0, count - 1);
-        return candidates != null ? List.copyOf(candidates) : Collections.emptyList();
+        return redisZrangeLatencyTimer.recordCallable(() -> {
+            Set<String> candidates = redisTemplate.opsForZSet().range(RedisKeys.MATCHING_QUEUE_KEY, 0, count - 1);
+            return candidates != null ? List.copyOf(candidates) : Collections.emptyList();
+        });
     }
 
     public void removeFromQueue(@NonNull String userId) {
@@ -113,7 +130,9 @@ public class RedisService {
 
     // Lua Script execution
     public Long executeMatchScript(@NonNull String userA, @NonNull String userB) {
-        List<String> keys = Objects.requireNonNull(List.of());
-        return redisTemplate.execute(matchScript, keys, userA, userB);
+        return redisLuaLatencyTimer.recordCallable(() -> {
+            List<String> keys = Objects.requireNonNull(List.of());
+            return redisTemplate.execute(matchScript, keys, userA, userB);
+        });
     }
 }
