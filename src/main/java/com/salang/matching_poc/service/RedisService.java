@@ -106,10 +106,15 @@ public class RedisService {
     }
 
     public List<String> getTopCandidates(int count) {
-        return redisZrangeLatencyTimer.recordCallable(() -> {
-            Set<String> candidates = redisTemplate.opsForZSet().range(RedisKeys.MATCHING_QUEUE_KEY, 0, count - 1);
-            return candidates != null ? List.copyOf(candidates) : Collections.emptyList();
-        });
+        try {
+            return redisZrangeLatencyTimer.recordCallable(() -> {
+                Set<String> candidates = redisTemplate.opsForZSet().range(RedisKeys.MATCHING_QUEUE_KEY, 0, count - 1);
+                return candidates != null ? List.copyOf(candidates) : Collections.emptyList();
+            });
+        } catch (Exception e) {
+            log.error("Error in getTopCandidates", e);
+            return Collections.emptyList();
+        }
     }
 
     public void removeFromQueue(@NonNull String userId) {
@@ -130,9 +135,14 @@ public class RedisService {
 
     // Lua Script execution
     public Long executeMatchScript(@NonNull String userA, @NonNull String userB) {
-        return redisLuaLatencyTimer.recordCallable(() -> {
-            List<String> keys = Objects.requireNonNull(List.of());
-            return redisTemplate.execute(matchScript, keys, userA, userB);
-        });
+        try {
+            return redisLuaLatencyTimer.recordCallable(() -> {
+                List<String> keys = Objects.requireNonNull(List.of());
+                return redisTemplate.execute(matchScript, keys, userA, userB);
+            });
+        } catch (Exception e) {
+            log.error("Error in executeMatchScript", e);
+            return null;
+        }
     }
 }
