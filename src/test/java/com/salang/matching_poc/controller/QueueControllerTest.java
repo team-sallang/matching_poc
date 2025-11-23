@@ -29,125 +29,126 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SuppressWarnings("null") // 테스트에서 userId 변수들은 null이 아님을 보장
 class QueueControllerTest {
 
-    @TestConfiguration
-    static class TestConfig {
-        @Bean
-        public MatchingService matchingService() {
-            return mock(MatchingService.class);
+        @TestConfiguration
+        static class TestConfig {
+                @Bean
+                public MatchingService matchingService() {
+                        return mock(MatchingService.class);
+                }
         }
-    }
 
-    @Autowired
-    private MockMvc mockMvc;
+        @Autowired
+        private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+        @Autowired
+        private ObjectMapper objectMapper;
 
-    @Autowired
-    private MatchingService matchingService;
+        @Autowired
+        private MatchingService matchingService;
 
-    private UUID userId1;
+        private UUID userId1;
 
-    @BeforeEach
-    void setUp() {
-        userId1 = UUID.randomUUID();
-    }
+        @BeforeEach
+        void setUp() {
+                userId1 = UUID.randomUUID();
+        }
 
-    @Test
-    @DisplayName("POST /queue/join - 정상 요청")
-    void joinQueue_success() throws Exception {
-        // given
-        JoinQueueRequest request = JoinQueueRequest.builder()
-                .userId(userId1)
-                .gender("male")
-                .build();
+        @Test
+        @DisplayName("POST /queue/join - 정상 요청")
+        void joinQueue_success() throws Exception {
+                // given
+                JoinQueueRequest request = JoinQueueRequest.builder()
+                                .userId(userId1)
+                                .gender("male")
+                                .build();
 
-        JoinQueueResponse response = JoinQueueResponse.builder()
-                .status(Status.WAITING.name())
-                .build();
+                JoinQueueResponse response = JoinQueueResponse.builder()
+                                .status(Status.WAITING.name())
+                                .build();
 
-        when(matchingService.joinQueue(any(JoinQueueRequest.class))).thenReturn(response);
+                when(matchingService.joinQueue(any(JoinQueueRequest.class))).thenReturn(response);
 
-        // when & then
-        mockMvc.perform(post("/queue/join")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("WAITING"));
-    }
+                // when & then
+                mockMvc.perform(post("/queue/join")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.status").value("WAITING"));
+        }
 
-    @Test
-    @DisplayName("POST /queue/leave - 정상 요청")
-    void leaveQueue_success() throws Exception {
-        // given
-        LeaveQueueRequest request = LeaveQueueRequest.builder()
-                .userId(userId1)
-                .build();
+        @Test
+        @DisplayName("POST /queue/leave - 정상 요청")
+        void leaveQueue_success() throws Exception {
+                // given
+                LeaveQueueRequest request = LeaveQueueRequest.builder()
+                                .userId(userId1)
+                                .build();
 
-        LeaveQueueResponse response = LeaveQueueResponse.builder()
-                .status(Status.IDLE.name())
-                .build();
+                LeaveQueueResponse response = LeaveQueueResponse.builder()
+                                .status(Status.IDLE.name())
+                                .build();
 
-        when(matchingService.leaveQueue(any(LeaveQueueRequest.class))).thenReturn(response);
+                when(matchingService.leaveQueue(any(LeaveQueueRequest.class))).thenReturn(response);
 
-        // when & then
-        mockMvc.perform(post("/queue/leave")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("IDLE"));
-    }
+                // when & then
+                mockMvc.perform(post("/queue/leave")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.status").value("IDLE"));
+        }
 
-    @Test
-    @DisplayName("GET /queue/status/{userId} - 정상 요청")
-    void getStatus_success() throws Exception {
-        // given
-        StatusResponse response = StatusResponse.builder()
-                .status(Status.WAITING.name())
-                .build();
+        @Test
+        @DisplayName("GET /queue/status/{userId} - 정상 요청")
+        void getStatus_success() throws Exception {
+                // given
+                StatusResponse response = StatusResponse.builder()
+                                .status(Status.WAITING.name())
+                                .build();
 
-        when(matchingService.getStatus(any(UUID.class))).thenReturn(response);
+                when(matchingService.getStatus(any(UUID.class))).thenReturn(response);
 
-        // when & then
-        mockMvc.perform(get("/queue/status/{userId}", userId1))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("WAITING"));
-    }
+                // when & then
+                // 실제 HTTP 요청과 동일하게 경로에 직접 UUID를 넣어서 테스트
+                mockMvc.perform(get("/queue/status/" + userId1))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.status").value("WAITING"));
+        }
 
-    @Test
-    @DisplayName("POST /queue/ack - 정상 요청")
-    void acknowledgeMatch_success() throws Exception {
-        // given
-        AckRequest request = AckRequest.builder()
-                .userId(userId1)
-                .build();
+        @Test
+        @DisplayName("POST /queue/ack - 정상 요청")
+        void acknowledgeMatch_success() throws Exception {
+                // given
+                AckRequest request = AckRequest.builder()
+                                .userId(userId1)
+                                .build();
 
-        AckResponse response = AckResponse.builder()
-                .status(Status.IDLE.name())
-                .build();
+                AckResponse response = AckResponse.builder()
+                                .status(Status.IDLE.name())
+                                .build();
 
-        when(matchingService.acknowledgeMatch(any(AckRequest.class))).thenReturn(response);
+                when(matchingService.acknowledgeMatch(any(AckRequest.class))).thenReturn(response);
 
-        // when & then
-        mockMvc.perform(post("/queue/ack")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("IDLE"));
-    }
+                // when & then
+                mockMvc.perform(post("/queue/ack")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.status").value("IDLE"));
+        }
 
-    @Test
-    @DisplayName("POST /queue/join - 유효하지 않은 요청")
-    void joinQueue_validationError() throws Exception {
-        // given - userId가 null인 경우
-        JoinQueueRequest request = JoinQueueRequest.builder()
-                .gender("male")
-                .build();
+        @Test
+        @DisplayName("POST /queue/join - 유효하지 않은 요청")
+        void joinQueue_validationError() throws Exception {
+                // given - userId가 null인 경우
+                JoinQueueRequest request = JoinQueueRequest.builder()
+                                .gender("male")
+                                .build();
 
-        // when & then
-        mockMvc.perform(post("/queue/join")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
-    }
+                // when & then
+                mockMvc.perform(post("/queue/join")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isBadRequest());
+        }
 }

@@ -1,4 +1,5 @@
 .env
+scripts/k6/test-users.json
 logs/
 HELP.md
 .gradle

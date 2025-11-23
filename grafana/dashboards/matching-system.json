@@ -1,0 +1,172 @@
+{
+  "title": "Matching System Dashboard",
+    "tags": ["matching", "poc"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 1,
+    "refresh": "10s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Queue Length",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "matching_match_queue_length",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "green"},
+                {"value": 100, "color": "yellow"},
+                {"value": 500, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Match Success Rate",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+        "targets": [
+          {
+            "expr": "(rate(matching_match_success_count_total[1m]) / clamp_min(rate(matching_match_success_count_total[1m]) + rate(matching_match_fail_count_total[1m]), 0.0001)) * 100",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "decimals": 2,
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "red"},
+                {"value": 50, "color": "yellow"},
+                {"value": 80, "color": "green"}
+              ]
+            }
+          }
+        },
+        "description": "Worker 관점의 매칭 성공률 (서버 측 메트릭). 실제 사용자 관점의 성공률과 타임아웃률은 k6 테스트 결과 참고."
+      },
+      {
+        "id": 3,
+        "title": "Worker Tick Latency",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+        "targets": [
+          {
+            "expr": "(rate(matching_worker_tick_latency_seconds_sum[1m]) / rate(matching_worker_tick_latency_seconds_count[1m])) * 1000",
+            "refId": "A",
+            "legendFormat": "Average"
+          },
+          {
+            "expr": "matching_worker_tick_latency_seconds_max * 1000",
+            "refId": "B",
+            "legendFormat": "Max"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "color": {"mode": "palette-classic"}
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Redis ZRANGE Latency",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 4},
+        "targets": [
+          {
+            "expr": "(rate(matching_redis_zrange_latency_seconds_sum[1m]) / rate(matching_redis_zrange_latency_seconds_count[1m])) * 1000",
+            "refId": "A",
+            "legendFormat": "Average"
+          },
+          {
+            "expr": "matching_redis_zrange_latency_seconds_max * 1000",
+            "refId": "B",
+            "legendFormat": "Max"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "color": {"mode": "palette-classic"}
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Redis Lua Script Latency",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 4},
+        "targets": [
+          {
+            "expr": "(rate(matching_redis_lua_latency_seconds_sum[1m]) / rate(matching_redis_lua_latency_seconds_count[1m])) * 1000",
+            "refId": "A",
+            "legendFormat": "Average"
+          },
+          {
+            "expr": "matching_redis_lua_latency_seconds_max * 1000",
+            "refId": "B",
+            "legendFormat": "Max"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "color": {"mode": "palette-classic"}
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Match Success/Fail Count",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+        "targets": [
+          {
+            "expr": "rate(matching_match_success_count_total[1m])",
+            "refId": "A",
+            "legendFormat": "Success"
+          },
+          {
+            "expr": "rate(matching_match_fail_count_total[1m])",
+            "refId": "B",
+            "legendFormat": "Fail"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "color": {"mode": "palette-classic"}
+          }
+        }
+      }
+    ],
+    "time": {
+      "from": "now-15m",
+      "to": "now"
+    },
+    "timepicker": {},
+    "templating": {
+      "list": []
+    },
+  "annotations": {
+    "list": []
+  }
+}
+

@@ -31,7 +31,7 @@ public class QueueController {
     }
 
     @GetMapping("/status/{userId}")
-    public ResponseEntity<StatusResponse> getStatus(@PathVariable UUID userId) {
+    public ResponseEntity<StatusResponse> getStatus(@PathVariable("userId") UUID userId) {
         StatusResponse response = matchingService.getStatus(userId);
         return ResponseEntity.ok(response);
     }

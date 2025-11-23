@@ -78,6 +78,8 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
     ports:
       - "3000:3000"
     depends_on:
@@ -85,6 +87,21 @@ services:
       - loki
     networks:
       - app-tier
+
+  # k6 Load Generator (필요 시에만 실행)
+  k6:
+    image: grafana/k6:latest
+    container_name: salang-k6
+    volumes:
+      - ./scripts/k6:/scripts
+    networks:
+      - app-tier
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Windows/Mac에서 호스트 접근
+    # 실행: make test 또는 docker compose run --rm k6 run /scripts/matching.js
+    # .env 파일이 있으면 자동으로 환경변수 로드됨
 
 volumes:
   postgres-data:
