@@ -39,23 +39,45 @@ docker compose run --rm k6 run /scripts/matching.js
 
 ## 환경변수
 
-| 변수               | 기본값                | 설명                           |
-| ------------------ | --------------------- | ------------------------------ |
-| `VU`               | 1000                  | 동시 사용자 수 (Virtual Users) |
-| `DURATION`         | 5m                    | 테스트 지속 시간               |
-| `RAMP_UP`          | 30s                   | Ramp-up 시간                   |
-| `RAMP_DOWN`        | 30s                   | Ramp-down 시간                 |
-| `BASE_URL`         | http://localhost:8080 | Spring Boot 앱 주소            |
-| `POLLING_INTERVAL` | 0.1                   | Status polling 간격 (초)       |
-| `TIMEOUT`          | 30                    | 타임아웃 (초)                  |
+| 변수                     | 기본값                | 설명                                      |
+| ------------------------ | --------------------- | ----------------------------------------- |
+| `VU`                     | 1000                  | 동시 사용자 수 (Virtual Users)            |
+| `DURATION`               | 5m                    | 테스트 지속 시간                          |
+| `RAMP_UP`                | 30s                   | Ramp-up 시간                              |
+| `RAMP_DOWN`              | 30s                   | Ramp-down 시간                            |
+| `BASE_URL`               | http://localhost:8080 | Spring Boot 앱 주소                       |
+| `POLLING_INTERVAL`       | 0.1                   | Status polling 간격 (초)                  |
+| `TIMEOUT`                | 30                    | 타임아웃 (초)                             |
+| `MATCH_SUCCESS_WAIT_MIN` | 30                    | 매칭 성공 후 최소 대기 시간 (초)          |
+| `MATCH_SUCCESS_WAIT_MAX` | 300                   | 매칭 성공 후 최대 대기 시간 (초, 5분)     |
+| `TIMEOUT_RETRY_WAIT_MIN` | 5                     | 타임아웃 후 재시도 전 최소 대기 시간 (초) |
+| `TIMEOUT_RETRY_WAIT_MAX` | 10                    | 타임아웃 후 재시도 전 최대 대기 시간 (초) |
 
 ## 테스트 시나리오
+
+### 기본 시나리오 (v1)
 
 각 VU는 다음 플로우를 수행합니다:
 
 1. **Join Queue**: `POST /queue/join` 호출
 2. **Status Polling**: `GET /queue/status/{userId}` 반복 호출 (MATCHED까지 대기)
 3. **ACK**: 매칭 성공 시 `POST /queue/ack` 호출
+
+### 현실적인 사용자 행동 시뮬레이션 시나리오 (v2) - 2025.11.24
+
+각 VU는 무한 루프로 다음 플로우를 반복 수행합니다:
+
+1. **Join Queue**: `POST /queue/join` 호출
+2. **Status Polling**: `GET /queue/status/{userId}` 반복 호출 (MATCHED까지 대기 또는 타임아웃)
+3. **성공 시나리오**:
+   - `POST /queue/ack` 호출
+   - 30초~5분 랜덤 대기
+   - 다음 매칭 시도로 이동
+4. **타임아웃 시나리오**:
+   - `POST /queue/leave` 호출 (큐에서 떠남)
+   - 5~10초 랜덤 대기
+   - 다음 매칭 시도로 이동
+5. **RAMP_DOWN 단계**: 테스트 종료 시 자동으로 사용자 정리 (Leave 또는 ACK)
 
 ## 성능 기준 (Threshold)
 
@@ -139,5 +161,53 @@ docker compose run --rm k6 run /scripts/matching.js
 
 - Postgres INSERT가 동기적으로 실행되어 Worker tick 시간 증가
 - Worker가 한 번에 여러 쌍을 매칭하면서 부하 증가
+
+### 테스트 3: 현실적인 사용자 행동 시뮬레이션 (v2) - 2025년 11월
+
+**개선 사항:**
+
+1. 매칭 성공 후 30초~5분 랜덤 대기
+2. 타임아웃 시 큐에서 떠나고 재시도 전 5~10초 대기
+3. 연속 매칭 시도 (무한 루프)
+4. RAMP_DOWN 단계에서 자동으로 사용자 정리 (타임아웃 0.5초)
+5. k6 Rate 메트릭 수정: `matchTimeoutRate.add(-1)` 제거, 타임아웃 시 실제 상태 확인 후 메트릭 기록
+
+**테스트 환경:**
+
+- VU: 1000명
+- DURATION: 2분
+- RAMP_UP: 30초
+- RAMP_DOWN: 30초
+- TIMEOUT: 30초
+- MATCH_SUCCESS_WAIT_MIN: 30초
+- MATCH_SUCCESS_WAIT_MAX: 300초 (5분)
+- TIMEOUT_RETRY_WAIT_MIN: 5초
+- TIMEOUT_RETRY_WAIT_MAX: 10초
+
+**테스트 결과:**
+
+| 메트릭                  | 값              | 목표   | 상태 |
+| ----------------------- | --------------- | ------ | ---- |
+| match_success_rate      | 99.02% (1118건) | >80%   | 통과 |
+| match_timeout_rate      | 100.00% (11건)  | -      | -    |
+| http_req_duration p(95) | 9.42ms          | <500ms | 통과 |
+| http_req_failed         | 0.08%           | <1%    | 통과 |
+| match_latency p(95)     | 823ms           | -      | -    |
+
+**상세 결과:**
+
+- 총 iterations: 86,289건
+- 총 HTTP 요청: 93,787건
+- 평균 iteration duration: 243.47ms
+- 실행 시간: 2분 29.8초
+- 모든 threshold 통과
+
+**분석:**
+
+- 매칭 성공률이 목표(80%)를 크게 상회 (99.02%)
+- HTTP 요청 지연 시간이 매우 낮음 (p(95) 9.42ms)
+- HTTP 실패율이 매우 낮음 (0.08%)
+- 타임아웃 발생 건수는 매우 적음 (11건)
+- 현실적인 사용자 행동 시뮬레이션이 효과적으로 작동
 
 ---

@@ -66,6 +66,132 @@
 2. 큐에 충분한 사용자가 있는지 확인 (Grafana 대시보드에서 Queue Length 확인)
 3. 성별 비율 확인 (테스트 사용자 생성 로직 확인, 50:50)
 4. Redis 상태 확인 (메모리 사용량, 연결 상태)
+5. 타임아웃 설정 확인 (`TIMEOUT` 환경변수, 기본값: 30초)
+6. 사용자 행동 시뮬레이션 설정 확인 (매칭 성공 후 대기 시간 등)
+
+### k6 Rate 메트릭이 잘못된 값 표시
+
+**증상**: `match_timeout_rate` 또는 `match_success_rate`가 예상과 다른 값 표시
+
+**원인:**
+
+- k6의 `Rate` 메트릭은 0이 아닌 모든 값(양수 및 음수 포함)을 성공으로 카운트합니다.
+- `matchTimeoutRate.add(-1)` 같은 패턴은 메트릭을 왜곡시킵니다.
+
+**해결 방법:**
+
+1. `add(-1)` 패턴 제거
+2. 각 iteration마다 명시적으로 `add(0)` 또는 `add(1)` 호출
+3. 타임아웃 시 실제 상태 확인 후 올바른 메트릭 기록
+
+**예시:**
+
+```javascript
+// 잘못된 방법
+matchTimeoutRate.add(1); // 타임아웃 기록
+// ... 나중에 성공하면
+matchTimeoutRate.add(-1); // 취소 시도 (하지만 -1도 성공으로 카운트됨)
+
+// 올바른 방법
+if (matched) {
+  matchSuccessRate.add(1);
+  matchTimeoutRate.add(0);
+} else {
+  matchSuccessRate.add(0);
+  matchTimeoutRate.add(1);
+}
+```
+
+### RAMP_DOWN 단계에서 타임아웃 발생
+
+**증상**: 테스트 종료 시 많은 타임아웃 에러 발생
+
+**원인:**
+
+- RAMP_DOWN 단계에서 많은 VU가 동시에 cleanup을 시도
+- 서버 부하로 인한 타임아웃
+
+**해결 방법:**
+
+1. cleanup 타임아웃을 짧게 설정 (기본값: 0.5초)
+2. cleanup 로직을 단순화 (status 확인 제거, 바로 leave/ack 시도)
+3. 에러 발생 시 무시하고 계속 진행 (try-catch 사용)
+
+**예시:**
+
+```javascript
+function cleanupUser(userId, timeout = '0.5s') {
+    // status 확인 없이 바로 leave 시도
+    try {
+        http.post(`${BASE_URL}/queue/leave`, ...);
+    } catch (e) {
+        // leave 실패 시 ack 시도
+        try {
+            http.post(`${BASE_URL}/queue/ack`, ...);
+        } catch (e2) {
+            // 둘 다 실패해도 무시
+        }
+    }
+}
+```
+
+### 같은 사용자가 여러 번 cleanup됨
+
+**증상**: 로그에서 같은 사용자 ID가 여러 번 cleanup되는 것처럼 보임
+
+**원인:**
+
+- 여러 VU가 같은 사용자를 cleanup하려고 시도
+- 또는 cleanup 로직이 중복 실행
+
+**해결 방법:**
+
+1. cleanup 로직을 `finally` 블록에 한 번만 배치
+2. cleanup 시 에러를 무시하고 계속 진행 (이미 cleanup된 사용자는 에러 발생)
+3. `console.log` 제거하여 중복 로그 방지
+
+### 타임아웃 후에도 큐에 사용자가 남아있음
+
+**증상**: 타임아웃 후에도 사용자가 큐에 남아있어 다음 매칭 시도 시 409 에러 발생
+
+**원인:**
+
+- 타임아웃 시 `LeaveQueue`를 호출하지 않음
+
+**해결 방법:**
+
+1. 타임아웃 시 `POST /queue/leave` 호출 추가
+2. 현실적인 사용자 행동 시뮬레이션: 타임아웃 시 큐에서 떠남
+
+**예시:**
+
+```javascript
+if (actualStatus === 'WAITING') {
+    http.post(`${BASE_URL}/queue/leave`, ...);
+}
+```
+
+### 테스트가 너무 빠르게 종료됨
+
+**증상**: 예상보다 빠르게 테스트가 종료되거나 iteration 수가 매우 높음
+
+**원인:**
+
+- 타임아웃 후 재시도 전 대기 시간이 없음
+- 매칭 성공 후 대기 시간이 없음
+
+**해결 방법:**
+
+1. 타임아웃 후 재시도 전 대기 시간 추가 (5~10초)
+2. 매칭 성공 후 대기 시간 추가 (30초~5분)
+3. 현실적인 사용자 행동 시뮬레이션 환경변수 설정 확인
+
+**환경변수:**
+
+- `MATCH_SUCCESS_WAIT_MIN`: 매칭 성공 후 최소 대기 시간 (기본값: 30초)
+- `MATCH_SUCCESS_WAIT_MAX`: 매칭 성공 후 최대 대기 시간 (기본값: 300초)
+- `TIMEOUT_RETRY_WAIT_MIN`: 타임아웃 후 재시도 전 최소 대기 시간 (기본값: 5초)
+- `TIMEOUT_RETRY_WAIT_MAX`: 타임아웃 후 재시도 전 최대 대기 시간 (기본값: 10초)
 
 ## Prometheus
 
