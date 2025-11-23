@@ -13,7 +13,7 @@ test:
 # 파일이 없으면 자동 생성, 있으면 건너뜀
 # .env 파일이 있으면 VU 환경변수를 자동으로 로드
 
-# 테스트 사용자 파일 강제 재생성
+# 테스트 사용자 파일 강제 재생
 regenerate-users:
 	@echo "Force regenerating test users file using Docker..."
 	@if [ -f .env ]; then \
@@ -27,7 +27,7 @@ regenerate-users:
 help:
 	@echo "사용 가능한 명령어:"
 	@echo "  make test            - k6 부하 테스트 실행 (사용자 파일 자동 생성)"
-	@echo "  make generate-users  - 테스트 사용자 파일 생아아 성 (파일이 없을 때만)"
+	@echo "  make generate-users  - 테스트 사용자 파일 생성 (파일이 없을 때만)"
 	@echo "  make regenerate-users - 테스트 사용자 파일 강제 재생성"
 	@echo ""
 	@echo "주의사항:"
