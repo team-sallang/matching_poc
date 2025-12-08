@@ -28,7 +28,7 @@ public class MatchingWorker {
     private static final long TICK_INTERVAL_MS = 50L; // 50ms
     private static final int TOP_CANDIDATES_COUNT = 50;
     private static final int MAX_MATCHES_PER_TICK = 10; // 한 tick에서 최대 매칭 수
-    private static final long MATCH_TIMEOUT_MS = 20_000L; // 20초 - 매칭 불가능한 사용자 자동 제거 (k6 TIMEOUT보다 짧게)
+    private static final long MATCH_TIMEOUT_MS = 35_000L; // 35초 - 매칭 불가능한 사용자 자동 제거 (k6 TIMEOUT보다 길게)
     private static final String WAITING_STATUS = Status.WAITING.name();
 
     private final RedisService redisService;
