@@ -1,9 +1,16 @@
 package com.salang.matching_poc.worker;
 
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+import org.springframework.stereotype.Component;
+
 import com.salang.matching_poc.model.entity.MatchHistory;
 import com.salang.matching_poc.model.enums.Status;
 import com.salang.matching_poc.repository.MatchHistoryRepository;
 import com.salang.matching_poc.service.RedisService;
+
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -12,11 +19,6 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
@@ -38,6 +40,7 @@ public class MatchingWorker {
 
     // 메트릭
     private Timer workerTickLatencyTimer;
+    private Timer matchDecisionLatencyTimer;
     private Counter matchSuccessCount;
     private Counter matchFailCount;
     @SuppressWarnings("unused") // Gauge는 자동으로 메트릭에 등록되므로 사용되지 않는다는 경고 무시
@@ -48,6 +51,11 @@ public class MatchingWorker {
         // 메트릭 초기화
         workerTickLatencyTimer = Timer.builder("matching_worker_tick_latency")
                 .description("Worker 1 루프(50ms tick) 수행 시간")
+                .register(meterRegistry);
+
+        matchDecisionLatencyTimer = Timer.builder("matching_decision_latency")
+                .description("JoinQueue부터 MATCHED까지의 시간")
+                .publishPercentiles(0.5, 0.95, 0.99)
                 .register(meterRegistry);
 
         matchSuccessCount = Counter.builder("matching_match_success_count")
@@ -173,6 +181,20 @@ public class MatchingWorker {
                     log.info("Matched users: {} and {}", userA, userB);
                     matchSuccessCount.increment();
                     matchCount++;
+
+                    // 매칭 결정 시간 측정
+                    Long lastJoinAtA = redisService.getLastJoinAt(userA);
+                    Long lastJoinAtB = redisService.getLastJoinAt(userB);
+                    long now = System.currentTimeMillis();
+
+                    if (lastJoinAtA != null) {
+                        long decisionTimeA = now - lastJoinAtA;
+                        matchDecisionLatencyTimer.record(decisionTimeA, TimeUnit.MILLISECONDS);
+                    }
+                    if (lastJoinAtB != null) {
+                        long decisionTimeB = now - lastJoinAtB;
+                        matchDecisionLatencyTimer.record(decisionTimeB, TimeUnit.MILLISECONDS);
+                    }
 
                     // Step 5: Postgres에 매칭 이력 저장
                     saveMatchHistory(userA, userB);
