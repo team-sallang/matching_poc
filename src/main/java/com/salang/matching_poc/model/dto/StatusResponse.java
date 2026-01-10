@@ -11,10 +11,12 @@ import java.util.UUID;
 public class StatusResponse {
     private String status; // "IDLE" | "WAITING" | "MATCHED"
     private UUID matchedWith; // optional, MATCHED일 때만 존재
+    private Long lastJoinAt; // optional, MATCHED일 때만 존재, 매칭 시작 시간 (epoch milliseconds)
 
     @Builder
-    public StatusResponse(String status, UUID matchedWith) {
+    public StatusResponse(String status, UUID matchedWith, Long lastJoinAt) {
         this.status = status;
         this.matchedWith = matchedWith;
+        this.lastJoinAt = lastJoinAt;
     }
 }

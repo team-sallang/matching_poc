@@ -149,6 +149,11 @@ public class MatchingService {
                 if (matchedWith != null) {
                     builder.matchedWith(UUID.fromString(matchedWith));
                 }
+                // lastJoinAt 추가
+                Long lastJoinAt = redisService.getLastJoinAt(userIdStr);
+                if (lastJoinAt != null) {
+                    builder.lastJoinAt(lastJoinAt);
+                }
             }
 
             return builder.build();

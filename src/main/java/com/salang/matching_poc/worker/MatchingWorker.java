@@ -3,6 +3,7 @@ package com.salang.matching_poc.worker;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.springframework.stereotype.Component;
 
@@ -46,6 +47,14 @@ public class MatchingWorker {
     @SuppressWarnings("unused") // Gauge는 자동으로 메트릭에 등록되므로 사용되지 않는다는 경고 무시
     private Gauge matchQueueLengthGauge;
 
+    // 성별 분포 카운터
+    private AtomicInteger queueMaleCount = new AtomicInteger(0);
+    private AtomicInteger queueFemaleCount = new AtomicInteger(0);
+    @SuppressWarnings("unused") // Gauge는 자동으로 메트릭에 등록되므로 사용되지 않는다는 경고 무시
+    private Gauge queueMaleCountGauge;
+    @SuppressWarnings("unused") // Gauge는 자동으로 메트릭에 등록되므로 사용되지 않는다는 경고 무시
+    private Gauge queueFemaleCountGauge;
+
     @PostConstruct
     public void start() {
         // 메트릭 초기화
@@ -69,6 +78,16 @@ public class MatchingWorker {
         matchQueueLengthGauge = Gauge.builder("matching_match_queue_length",
                 () -> redisService.getQueueLength() != null ? redisService.getQueueLength().doubleValue() : 0.0)
                 .description("Redis ZSET의 현재 큐 길이")
+                .register(meterRegistry);
+
+        queueMaleCountGauge = Gauge.builder("matching_queue_male_count",
+                () -> queueMaleCount.get())
+                .description("Top-50 후보 중 WAITING 상태인 남성 사용자 수")
+                .register(meterRegistry);
+
+        queueFemaleCountGauge = Gauge.builder("matching_queue_female_count",
+                () -> queueFemaleCount.get())
+                .description("Top-50 후보 중 WAITING 상태인 여성 사용자 수")
                 .register(meterRegistry);
 
         running = true;
@@ -125,8 +144,27 @@ public class MatchingWorker {
         List<String> candidates = redisService.getTopCandidates(TOP_CANDIDATES_COUNT);
         if (candidates.isEmpty()) {
             matchFailCount.increment();
+            // 성별 카운터 초기화
+            queueMaleCount.set(0);
+            queueFemaleCount.set(0);
             return;
         }
+
+        // 성별 분포 계산
+        int maleCount = 0;
+        int femaleCount = 0;
+        for (String userId : candidates) {
+            if (isWaiting(userId)) {
+                String gender = redisService.getGender(userId);
+                if ("male".equals(gender)) {
+                    maleCount++;
+                } else if ("female".equals(gender)) {
+                    femaleCount++;
+                }
+            }
+        }
+        queueMaleCount.set(maleCount);
+        queueFemaleCount.set(femaleCount);
 
         int matchCount = 0;
 
