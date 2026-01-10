@@ -11,8 +11,8 @@ const RAMP_DOWN = __ENV.RAMP_DOWN || '30s'; // VU 감소 전 큐 비우기 시�
 const POLLING_INTERVAL = parseFloat(__ENV.POLLING_INTERVAL || '0.1');
 const TIMEOUT = parseInt(__ENV.TIMEOUT || '30');
 // 현실적인 사용자 행동 시뮬레이션을 위한 대기 시간
-const MATCH_SUCCESS_WAIT_MIN = parseInt(__ENV.MATCH_SUCCESS_WAIT_MIN || '30'); // 매칭 성공 후 최소 대기 시간 (초)
-const MATCH_SUCCESS_WAIT_MAX = parseInt(__ENV.MATCH_SUCCESS_WAIT_MAX || '300'); // 매칭 성공 후 최대 대기 시간 (초, 5분)
+const MATCH_SUCCESS_WAIT_MIN = parseInt(__ENV.MATCH_SUCCESS_WAIT_MIN || '10'); // 매칭 성공 후 최소 대기 시간 (10초)
+const MATCH_SUCCESS_WAIT_MAX = parseInt(__ENV.MATCH_SUCCESS_WAIT_MAX || '60'); // 매칭 성공 후 최대 대기 시간 (초, 1분)
 const TIMEOUT_RETRY_WAIT_MIN = parseInt(__ENV.TIMEOUT_RETRY_WAIT_MIN || '5'); // 타임아웃 후 재시도 전 최소 대기 시간 (초)
 const TIMEOUT_RETRY_WAIT_MAX = parseInt(__ENV.TIMEOUT_RETRY_WAIT_MAX || '10'); // 타임아웃 후 재시도 전 최대 대기 시간 (초)
 
@@ -187,8 +187,7 @@ export default function (data) {
             
             // Join 실패 처리
             if (joinResponse.status === 0) {
-                const matchLatencyMs = Date.now() - joinStartTime;
-                matchLatency.add(matchLatencyMs);
+                // matchLatency 기록 제거 (Join 실패는 매칭 시도 자체가 실패)
                 matchTimeoutRate.add(1);
                 matchSuccessRate.add(0);
                 sleep(1);
@@ -199,8 +198,7 @@ export default function (data) {
             // 409 ALREADY_IN_QUEUE는 정상 (이전 반복에서 큐에 남아있을 수 있음)
             // 200이 아니고 409도 아니면 실패
             if (joinResponse.status !== 200 && joinResponse.status !== 409) {
-                const matchLatencyMs = Date.now() - joinStartTime;
-                matchLatency.add(matchLatencyMs);
+                // matchLatency 기록 제거 (Join 실패는 매칭 시도 자체가 실패)
                 matchTimeoutRate.add(1);
                 matchSuccessRate.add(0);
                 sleep(1);
@@ -244,6 +242,11 @@ export default function (data) {
                         if (statusBody.status === 'MATCHED') {
                             matched = true;
                             matchedWith = statusBody.matchedWith;
+                            // 매칭 성공 시점에 즉시 match_latency 기록
+                            const matchLatencyMs = Date.now() - joinStartTime;
+                            if (matchLatencyMs >= 0) {  // 음수 방지
+                                matchLatency.add(matchLatencyMs);
+                            }
                             break;
                         }
                     } catch (e) {
@@ -256,8 +259,8 @@ export default function (data) {
                 sleep(POLLING_INTERVAL);
             }
             
-            const matchLatencyMs = Date.now() - joinStartTime;
-            matchLatency.add(matchLatencyMs);
+            // 매칭 성공 시점에 이미 기록했으므로 여기서는 제거
+            // 타임아웃인 경우는 아래 else 블록에서 처리
             
             // 6. 성공/타임아웃 처리
             if (matched) {
@@ -277,6 +280,7 @@ export default function (data) {
                     'ack status is 200': (r) => r.status === 200,
                 });
                 
+                const matchLatencyMs = Date.now() - joinStartTime;
                 console.log(`User ${currentUserId} matched with ${matchedWith} in ${matchLatencyMs}ms`);
                 
                 // 현실적인 사용자 행동: 매칭 성공 후 대화/게임 시간 시뮬레이션 (30초~5분 랜덤)
@@ -291,6 +295,30 @@ export default function (data) {
                     // 실제로는 매칭 성공 (polling 타임아웃이었지만 매칭은 완료됨)
                     matchSuccessRate.add(1);
                     matchTimeoutRate.add(0);
+                    
+                    // Status API를 다시 호출하여 lastJoinAt 정보 획득
+                    const statusResponse = http.get(
+                        `${BASE_URL}/queue/status/${currentUserId}`,
+                        {
+                            headers: { 'Content-Type': 'application/json' },
+                            timeout: '5s',
+                        }
+                    );
+                    
+                    if (statusResponse.status === 200 && statusResponse.body) {
+                        try {
+                            const statusBody = JSON.parse(statusResponse.body);
+                            if (statusBody.lastJoinAt) {
+                                // 실제 매칭 시간 = 현재 시간 - lastJoinAt
+                                const actualMatchTime = Date.now() - statusBody.lastJoinAt;
+                                if (actualMatchTime >= 0) {  // 음수 방지
+                                    matchLatency.add(actualMatchTime);
+                                }
+                            }
+                        } catch (e) {
+                            // JSON 파싱 실패 시 무시
+                        }
+                    }
                     
                     // ACK 호출
                     const ackResponse = http.post(

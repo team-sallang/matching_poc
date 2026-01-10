@@ -26,6 +26,7 @@
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
+      "description": "현재 매칭 대기열에 있는 사용자 수. Redis ZSET의 크기(ZCARD)를 나타냅니다.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -54,9 +55,9 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 0,
+        "h": 5,
+        "w": 5,
+        "x": 4,
         "y": 0
       },
       "id": 1,
@@ -89,14 +90,156 @@
         }
       ],
       "title": "Queue Length",
-      "type": "stat",
-      "description": "현재 매칭 대기열에 있는 사용자 수. Redis ZSET의 크기(ZCARD)를 나타냅니다."
+      "type": "stat"
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
+      "description": "Top-50 후보 중 WAITING 상태인 남성 사용자 수. 현재 시점의 남성 대기자 수를 빠르게 확인합니다.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 25
+              },
+              {
+                "color": "red",
+                "value": 35
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 9,
+        "y": 0
+      },
+      "id": 11,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "matching_queue_male_count",
+          "refId": "A"
+        }
+      ],
+      "title": "Queue Male Count",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "description": "Top-50 후보 중 WAITING 상태인 여성 사용자 수. 현재 시점의 여성 대기자 수를 빠르게 확인합니다.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 25
+              },
+              {
+                "color": "red",
+                "value": 35
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 14,
+        "y": 0
+      },
+      "id": 12,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "matching_queue_female_count",
+          "refId": "A"
+        }
+      ],
+      "title": "Queue Female Count",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "description": "JoinQueue API의 응답 시간. 테스트 목표: 50ms 이하. 사용자가 매칭 큐에 등록하는데 걸리는 시간을 측정합니다.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -155,10 +298,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
-        "w": 18,
-        "x": 6,
-        "y": 0
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 5
       },
       "id": 7,
       "options": {
@@ -214,8 +357,7 @@
         }
       ],
       "title": "JoinQueue Latency",
-      "type": "timeseries",
-      "description": "JoinQueue API의 응답 시간. 테스트 목표: 50ms 이하. 사용자가 매칭 큐에 등록하는데 걸리는 시간을 측정합니다."
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -310,10 +452,10 @@
         ]
       },
       "gridPos": {
-        "h": 8,
+        "h": 9,
         "w": 24,
         "x": 0,
-        "y": 4
+        "y": 16
       },
       "id": 8,
       "options": {
@@ -376,6 +518,7 @@
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
+      "description": "매칭 성공/실패 횟수 (초당). Worker가 처리한 매칭 시도 횟수를 나타냅니다. Success는 매칭 성공, Fail은 조건 불충족으로 인한 실패입니다.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -437,7 +580,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 12
+        "y": 25
       },
       "id": 6,
       "options": {
@@ -475,14 +618,14 @@
         }
       ],
       "title": "Match Success/Fail Count",
-      "type": "timeseries",
-      "description": "매칭 성공/실패 횟수 (초당). Worker가 처리한 매칭 시도 횟수를 나타냅니다. Success는 매칭 성공, Fail은 조건 불충족으로 인한 실패입니다."
+      "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
+      "description": "Status API의 응답 시간. 사용자가 매칭 상태를 조회하는데 걸리는 시간을 측정합니다. Status Polling 성능 모니터링에 사용됩니다.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -544,7 +687,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 12
+        "y": 25
       },
       "id": 9,
       "options": {
@@ -591,343 +734,444 @@
         }
       ],
       "title": "Status API Latency",
-      "type": "timeseries",
-      "description": "Status API의 응답 시간. 사용자가 매칭 상태를 조회하는데 걸리는 시간을 측정합니다. Status Polling 성능 모니터링에 사용됩니다."
+      "type": "timeseries"
     },
     {
-      "collapsed": true,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "description": "Top-50 후보의 성별 분포를 시간에 따라 표시합니다. 남성과 여성 사용자 수를 막대 그래프로 비교하여 불균형 상태를 한눈에 파악할 수 있습니다.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "bars",
+            "fillOpacity": 100,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 33
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.2.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "matching_queue_male_count",
+          "legendFormat": "Male",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "matching_queue_female_count",
+          "legendFormat": "Female",
+          "refId": "B"
+        }
+      ],
+      "title": "Gender Distribution",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 44
       },
       "id": 10,
-      "panels": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "description": "Worker가 50ms 주기로 실행되는 한 번의 tick(루프)을 완료하는데 걸리는 시간. Worker의 전체 성능을 나타내며, Top-50 후보 조회, 매칭 조건 검사, Lua Script 실행, PostgreSQL 저장 등 모든 작업을 포함합니다. 50ms를 초과하면 다음 tick이 지연될 수 있습니다.",
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisBorderShow": false,
-                "axisCenteredZero": false,
-                "axisColorMode": "text",
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "barWidthFactor": 0.6,
-                "drawStyle": "line",
-                "fillOpacity": 0,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "insertNulls": false,
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "showValues": false,
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": 0
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "ms"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 1,
-            "y": 21
-          },
-          "id": 3,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom",
-              "showLegend": true
-            },
-            "tooltip": {
-              "hideZeros": false,
-              "mode": "single",
-              "sort": "none"
-            }
-          },
-          "pluginVersion": "12.2.0",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-              },
-              "expr": "(rate(matching_worker_tick_latency_seconds_sum[1m]) / rate(matching_worker_tick_latency_seconds_count[1m])) * 1000",
-              "legendFormat": "Average",
-              "refId": "A"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-              },
-              "expr": "matching_worker_tick_latency_seconds_max * 1000",
-              "legendFormat": "Max",
-              "refId": "B"
-            }
-          ],
-          "title": "Worker Tick Latency",
-          "type": "timeseries"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "description": "Redis에서 Lua Script를 실행하여 원자적으로 매칭을 처리하는데 걸리는 시간. Lua Script는 두 사용자의 상태 검증, 상태 변경(MATCHED), matchedWith 설정, 큐에서 제거를 단일 원자 연산으로 처리합니다. 이 지연 시간이 길면 매칭 처리 속도에 영향을 줍니다.",
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisBorderShow": false,
-                "axisCenteredZero": false,
-                "axisColorMode": "text",
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "barWidthFactor": 0.6,
-                "drawStyle": "line",
-                "fillOpacity": 0,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "insertNulls": false,
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "showValues": false,
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": 0
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "ms"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 6,
-            "x": 13,
-            "y": 21
-          },
-          "id": 5,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom",
-              "showLegend": true
-            },
-            "tooltip": {
-              "hideZeros": false,
-              "mode": "single",
-              "sort": "none"
-            }
-          },
-          "pluginVersion": "12.2.0",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-              },
-              "expr": "(rate(matching_redis_lua_latency_seconds_sum[1m]) / rate(matching_redis_lua_latency_seconds_count[1m])) * 1000",
-              "legendFormat": "Average",
-              "refId": "A"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-              },
-              "expr": "matching_redis_lua_latency_seconds_max * 1000",
-              "legendFormat": "Max",
-              "refId": "B"
-            }
-          ],
-          "title": "Redis Lua Script Latency",
-          "type": "timeseries"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "description": "Redis에서 ZRANGE 명령을 실행하여 Top-50 후보를 조회하는데 걸리는 시간. Worker가 매 tick마다 오래 기다린 상위 50명의 사용자를 조회하는 성능을 나타냅니다. 이 지연 시간이 길면 Worker tick 시간이 증가하고 전체 매칭 성능에 영향을 줍니다.",
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisBorderShow": false,
-                "axisCenteredZero": false,
-                "axisColorMode": "text",
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "barWidthFactor": 0.6,
-                "drawStyle": "line",
-                "fillOpacity": 0,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "insertNulls": false,
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "showValues": false,
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": 0
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "ms"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 6,
-            "x": 1,
-            "y": 29
-          },
-          "id": 4,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom",
-              "showLegend": true
-            },
-            "tooltip": {
-              "hideZeros": false,
-              "mode": "single",
-              "sort": "none"
-            }
-          },
-          "pluginVersion": "12.2.0",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-              },
-              "expr": "(rate(matching_redis_zrange_latency_seconds_sum[1m]) / rate(matching_redis_zrange_latency_seconds_count[1m])) * 1000",
-              "legendFormat": "Average",
-              "refId": "A"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-              },
-              "expr": "matching_redis_zrange_latency_seconds_max * 1000",
-              "legendFormat": "Max",
-              "refId": "B"
-            }
-          ],
-          "title": "Redis ZRANGE Latency",
-          "type": "timeseries"
-        }
-      ],
+      "panels": [],
       "title": "System Metrics",
       "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "description": "Worker가 50ms 주기로 실행되는 한 번의 tick(루프)을 완료하는데 걸리는 시간. Worker의 전체 성능을 나타내며, Top-50 후보 조회, 매칭 조건 검사, Lua Script 실행, PostgreSQL 저장 등 모든 작업을 포함합니다. 50ms를 초과하면 다음 tick이 지연될 수 있습니다.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 1,
+        "y": 45
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.2.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "(rate(matching_worker_tick_latency_seconds_sum[1m]) / rate(matching_worker_tick_latency_seconds_count[1m])) * 1000",
+          "legendFormat": "Average",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "matching_worker_tick_latency_seconds_max * 1000",
+          "legendFormat": "Max",
+          "refId": "B"
+        }
+      ],
+      "title": "Worker Tick Latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "description": "Redis에서 Lua Script를 실행하여 원자적으로 매칭을 처리하는데 걸리는 시간. Lua Script는 두 사용자의 상태 검증, 상태 변경(MATCHED), matchedWith 설정, 큐에서 제거를 단일 원자 연산으로 처리합니다. 이 지연 시간이 길면 매칭 처리 속도에 영향을 줍니다.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 11,
+        "x": 13,
+        "y": 45
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.2.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "(rate(matching_redis_lua_latency_seconds_sum[1m]) / rate(matching_redis_lua_latency_seconds_count[1m])) * 1000",
+          "legendFormat": "Average",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "matching_redis_lua_latency_seconds_max * 1000",
+          "legendFormat": "Max",
+          "refId": "B"
+        }
+      ],
+      "title": "Redis Lua Script Latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "description": "Redis에서 ZRANGE 명령을 실행하여 Top-50 후보를 조회하는데 걸리는 시간. Worker가 매 tick마다 오래 기다린 상위 50명의 사용자를 조회하는 성능을 나타냅니다. 이 지연 시간이 길면 Worker tick 시간이 증가하고 전체 매칭 성능에 영향을 줍니다.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 1,
+        "y": 53
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.2.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "(rate(matching_redis_zrange_latency_seconds_sum[1m]) / rate(matching_redis_zrange_latency_seconds_count[1m])) * 1000",
+          "legendFormat": "Average",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "matching_redis_zrange_latency_seconds_max * 1000",
+          "legendFormat": "Max",
+          "refId": "B"
+        }
+      ],
+      "title": "Redis ZRANGE Latency",
+      "type": "timeseries"
     }
   ],
   "preload": false,
@@ -948,5 +1192,5 @@
   "timezone": "browser",
   "title": "Matching System Dashboard",
   "uid": "37602b69-5743-4003-b0e8-3479cdf462b5",
-  "version": 9
+  "version": 20
 }
