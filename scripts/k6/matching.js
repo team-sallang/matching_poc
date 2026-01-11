@@ -280,9 +280,6 @@ export default function (data) {
                     'ack status is 200': (r) => r.status === 200,
                 });
                 
-                const matchLatencyMs = Date.now() - joinStartTime;
-                console.log(`User ${currentUserId} matched with ${matchedWith} in ${matchLatencyMs}ms`);
-                
                 // 현실적인 사용자 행동: 매칭 성공 후 대화/게임 시간 시뮬레이션 (30초~5분 랜덤)
                 const successWaitTime = Math.random() * (MATCH_SUCCESS_WAIT_MAX - MATCH_SUCCESS_WAIT_MIN) + MATCH_SUCCESS_WAIT_MIN;
                 sleep(successWaitTime);
@@ -296,29 +293,8 @@ export default function (data) {
                     matchSuccessRate.add(1);
                     matchTimeoutRate.add(0);
                     
-                    // Status API를 다시 호출하여 lastJoinAt 정보 획득
-                    const statusResponse = http.get(
-                        `${BASE_URL}/queue/status/${currentUserId}`,
-                        {
-                            headers: { 'Content-Type': 'application/json' },
-                            timeout: '5s',
-                        }
-                    );
-                    
-                    if (statusResponse.status === 200 && statusResponse.body) {
-                        try {
-                            const statusBody = JSON.parse(statusResponse.body);
-                            if (statusBody.lastJoinAt) {
-                                // 실제 매칭 시간 = 현재 시간 - lastJoinAt
-                                const actualMatchTime = Date.now() - statusBody.lastJoinAt;
-                                if (actualMatchTime >= 0) {  // 음수 방지
-                                    matchLatency.add(actualMatchTime);
-                                }
-                            }
-                        } catch (e) {
-                            // JSON 파싱 실패 시 무시
-                        }
-                    }
+                    // 타임아웃 후 확인한 경우는 실제 매칭 시간을 알 수 없으므로
+                    // match_latency 기록하지 않음 (이미 정상 매칭 시점에 기록됨)
                     
                     // ACK 호출
                     const ackResponse = http.post(

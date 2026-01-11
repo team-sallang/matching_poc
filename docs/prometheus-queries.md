@@ -13,9 +13,12 @@
 
 ### Summary 메트릭 (Timer)
 
-- `matching_worker_tick_latency_seconds_*` - Worker tick 지연 시간
-- `matching_redis_zrange_latency_seconds_*` - ZRANGE 지연 시간
-- `matching_redis_lua_latency_seconds_*` - Lua Script 지연 시간
+- `matching_join_queue_latency_seconds_*` - JoinQueue API 응답 시간
+- `matching_decision_latency_seconds_*` - 매칭 결정 시간 (JoinQueue → MATCHED)
+- `matching_status_latency_seconds_*` - Status API 응답 시간
+- `matching_worker_tick_latency_seconds_*` - Worker tick 지연 시간 (시스템 내부)
+- `matching_redis_zrange_latency_seconds_*` - ZRANGE 지연 시간 (시스템 내부)
+- `matching_redis_lua_latency_seconds_*` - Lua Script 지연 시간 (시스템 내부)
 
 ## 기본 쿼리 예제
 
@@ -53,6 +56,74 @@ matching_worker_tick_latency_seconds_max * 1000
 
 ```
 (rate(matching_redis_lua_latency_seconds_sum[5m]) / rate(matching_redis_lua_latency_seconds_count[5m])) * 1000
+```
+
+## 사용자 경험 메트릭 (테스트 목표 검증)
+
+### JoinQueue API 평균 응답 시간 (ms)
+
+```
+(rate(matching_join_queue_latency_seconds_sum[1m]) / rate(matching_join_queue_latency_seconds_count[1m])) * 1000
+```
+
+### JoinQueue API p95 응답 시간 (ms)
+
+```
+histogram_quantile(0.95, rate(matching_join_queue_latency_seconds_bucket[1m])) * 1000
+```
+
+### JoinQueue API p99 응답 시간 (ms)
+
+```
+histogram_quantile(0.99, rate(matching_join_queue_latency_seconds_bucket[1m])) * 1000
+```
+
+### JoinQueue API 최대 응답 시간 (ms)
+
+```
+matching_join_queue_latency_seconds_max * 1000
+```
+
+### 매칭 결정 평균 시간 (ms)
+
+```
+(rate(matching_decision_latency_seconds_sum[1m]) / rate(matching_decision_latency_seconds_count[1m])) * 1000
+```
+
+### 매칭 결정 p95 시간 (ms)
+
+```
+histogram_quantile(0.95, rate(matching_decision_latency_seconds_bucket[1m])) * 1000
+```
+
+### 매칭 결정 p99 시간 (ms)
+
+```
+histogram_quantile(0.99, rate(matching_decision_latency_seconds_bucket[1m])) * 1000
+```
+
+### 매칭 결정 최대 시간 (ms)
+
+```
+matching_decision_latency_seconds_max * 1000
+```
+
+### Status API 평균 응답 시간 (ms)
+
+```
+(rate(matching_status_latency_seconds_sum[1m]) / rate(matching_status_latency_seconds_count[1m])) * 1000
+```
+
+### Status API p95 응답 시간 (ms)
+
+```
+histogram_quantile(0.95, rate(matching_status_latency_seconds_bucket[1m])) * 1000
+```
+
+### Status API 최대 응답 시간 (ms)
+
+```
+matching_status_latency_seconds_max * 1000
 ```
 
 ## Prometheus UI 사용 방법

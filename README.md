@@ -24,7 +24,7 @@
 
 > 버전 기준 : Gradle 8.14.3 / Spring Boot 3.4 / Java 17
 >
-> **Infra: Docker Compose + PostgreSQL(Supabase) + Redis + Prometheus + Grafana + Loki (PLG Stack)**
+> **Infra: Docker Swarm + PostgreSQL + Redis + Prometheus + Grafana + Loki (PLG Stack)**
 
 ## 1.2 실험 구조
 
