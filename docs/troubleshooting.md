@@ -8,8 +8,12 @@
 
 **해결 방법**:
 
-1. PostgreSQL이 실행 중인지 확인: `docker compose ps db`
-2. Redis가 실행 중인지 확인: `docker compose ps redis`
+1. PostgreSQL이 실행 중인지 확인:
+   - Swarm 모드: `docker service ls` 또는 `docker service ps matching-poc_db`
+   - 일반 Compose: `docker compose ps db`
+2. Redis가 실행 중인지 확인:
+   - Swarm 모드: `docker service ps matching-poc_redis`
+   - 일반 Compose: `docker compose ps redis`
 3. 포트 충돌 확인 (8080, 5432, 6379)
 4. 로그 확인: `logs/application.log`
 
@@ -20,8 +24,12 @@
 **해결 방법**:
 
 1. `application.yaml`의 데이터베이스 설정 확인
-2. Docker Compose로 PostgreSQL이 실행 중인지 확인
-3. 네트워크 연결 확인: `docker compose exec db psql -U myuser -d mydatabase`
+2. PostgreSQL이 실행 중인지 확인:
+   - Swarm 모드: `docker service ps matching-poc_db`
+   - 일반 Compose: `docker compose ps db`
+3. 네트워크 연결 확인:
+   - Swarm 모드: `docker service logs matching-poc_db`
+   - 일반 Compose: `docker compose exec db psql -U myuser -d mydatabase`
 
 ### Redis 연결 실패
 
@@ -29,8 +37,12 @@
 
 **해결 방법**:
 
-1. Redis가 실행 중인지 확인: `docker compose ps redis`
-2. Redis 연결 테스트: `docker compose exec redis redis-cli ping`
+1. Redis가 실행 중인지 확인:
+   - Swarm 모드: `docker service ps matching-poc_redis`
+   - 일반 Compose: `docker compose ps redis`
+2. Redis 연결 테스트:
+   - Swarm 모드: `docker service logs matching-poc_redis`
+   - 일반 Compose: `docker compose exec redis redis-cli ping`
 3. `application.yaml`의 Redis 설정 확인
 
 ## k6 테스트
@@ -232,7 +244,9 @@ if (actualStatus === 'WAITING') {
 1. 프로비저닝 설정 확인: `grafana/provisioning/dashboards/dashboard.yml`
 2. 대시보드 JSON 파일 확인: `grafana/dashboards/matching-system.json`
 3. 볼륨 마운트 확인: `compose.yml`의 grafana 서비스 볼륨 설정
-4. Grafana 로그 확인: `docker compose logs grafana`
+4. Grafana 로그 확인:
+   - Swarm 모드: `docker service logs matching-poc_grafana`
+   - 일반 Compose: `docker compose logs grafana`
 
 ### 데이터소스 연결 실패
 
@@ -264,7 +278,21 @@ if (actualStatus === 'WAITING') {
 tail -f logs/application.log
 ```
 
-### Docker Compose 로그
+### Docker 로그
+
+**Swarm 모드:**
+
+```bash
+# 전체 서비스 목록
+docker service ls
+
+# 특정 서비스 로그
+docker service logs matching-poc_prometheus
+docker service logs matching-poc_grafana
+docker service logs matching-poc_redis
+```
+
+**일반 Docker Compose:**
 
 ```bash
 # 전체 로그
@@ -304,7 +332,9 @@ k6 실행 시 콘솔에 실시간으로 출력됩니다.
 
 문제가 지속되면 다음을 확인하세요:
 
-1. 모든 서비스가 실행 중인지 확인: `docker compose ps`
+1. 모든 서비스가 실행 중인지 확인:
+   - Swarm 모드: `docker service ls`
+   - 일반 Compose: `docker compose ps`
 2. 포트 충돌 확인
 3. 시스템 리소스 확인 (CPU, 메모리, 디스크)
 4. 네트워크 연결 확인

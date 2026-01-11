@@ -1,6 +1,9 @@
 spring:
   application:
     name: matching_poc
+  docker:
+    compose:
+      enabled: false # Swarm 모드에서는 사용하지 않음
   datasource:
     url: jdbc:postgresql://localhost:5432/mydatabase
     username: myuser

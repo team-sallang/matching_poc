@@ -2,7 +2,7 @@
 
 ## 개요
 
-k6는 매칭 시스템의 부하 테스트를 수행하는 도구입니다. Docker Compose를 통해 실행합니다.
+k6는 매칭 시스템의 부하 테스트를 수행하는 도구입니다. docker run을 통해 실행합니다.
 
 ## 사전 요구사항
 
@@ -29,12 +29,6 @@ make regenerate-users
 
 ```bash
 make test
-```
-
-또는
-
-```bash
-docker compose run --rm k6 run /scripts/matching.js
 ```
 
 ## 환경변수

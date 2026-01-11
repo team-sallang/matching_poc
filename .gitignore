@@ -1,3 +1,4 @@
+.metals
 .env
 scripts/k6/test-users.json
 logs/

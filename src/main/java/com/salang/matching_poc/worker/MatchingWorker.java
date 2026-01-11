@@ -1,9 +1,17 @@
 package com.salang.matching_poc.worker;
 
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.springframework.stereotype.Component;
+
 import com.salang.matching_poc.model.entity.MatchHistory;
 import com.salang.matching_poc.model.enums.Status;
 import com.salang.matching_poc.repository.MatchHistoryRepository;
 import com.salang.matching_poc.service.RedisService;
+
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -12,11 +20,6 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
@@ -26,7 +29,7 @@ public class MatchingWorker {
     private static final long TICK_INTERVAL_MS = 50L; // 50ms
     private static final int TOP_CANDIDATES_COUNT = 50;
     private static final int MAX_MATCHES_PER_TICK = 10; // 한 tick에서 최대 매칭 수
-    private static final long MATCH_TIMEOUT_MS = 20_000L; // 20초 - 매칭 불가능한 사용자 자동 제거 (k6 TIMEOUT보다 짧게)
+    private static final long MATCH_TIMEOUT_MS = 35_000L; // 35초 - 매칭 불가능한 사용자 자동 제거 (k6 TIMEOUT보다 길게)
     private static final String WAITING_STATUS = Status.WAITING.name();
 
     private final RedisService redisService;
@@ -38,16 +41,30 @@ public class MatchingWorker {
 
     // 메트릭
     private Timer workerTickLatencyTimer;
+    private Timer matchDecisionLatencyTimer;
     private Counter matchSuccessCount;
     private Counter matchFailCount;
     @SuppressWarnings("unused") // Gauge는 자동으로 메트릭에 등록되므로 사용되지 않는다는 경고 무시
     private Gauge matchQueueLengthGauge;
+
+    // 성별 분포 카운터
+    private AtomicInteger queueMaleCount = new AtomicInteger(0);
+    private AtomicInteger queueFemaleCount = new AtomicInteger(0);
+    @SuppressWarnings("unused") // Gauge는 자동으로 메트릭에 등록되므로 사용되지 않는다는 경고 무시
+    private Gauge queueMaleCountGauge;
+    @SuppressWarnings("unused") // Gauge는 자동으로 메트릭에 등록되므로 사용되지 않는다는 경고 무시
+    private Gauge queueFemaleCountGauge;
 
     @PostConstruct
     public void start() {
         // 메트릭 초기화
         workerTickLatencyTimer = Timer.builder("matching_worker_tick_latency")
                 .description("Worker 1 루프(50ms tick) 수행 시간")
+                .register(meterRegistry);
+
+        matchDecisionLatencyTimer = Timer.builder("matching_decision_latency")
+                .description("JoinQueue부터 MATCHED까지의 시간")
+                .publishPercentiles(0.5, 0.95, 0.99)
                 .register(meterRegistry);
 
         matchSuccessCount = Counter.builder("matching_match_success_count")
@@ -61,6 +78,16 @@ public class MatchingWorker {
         matchQueueLengthGauge = Gauge.builder("matching_match_queue_length",
                 () -> redisService.getQueueLength() != null ? redisService.getQueueLength().doubleValue() : 0.0)
                 .description("Redis ZSET의 현재 큐 길이")
+                .register(meterRegistry);
+
+        queueMaleCountGauge = Gauge.builder("matching_queue_male_count",
+                () -> queueMaleCount.get())
+                .description("Top-50 후보 중 WAITING 상태인 남성 사용자 수")
+                .register(meterRegistry);
+
+        queueFemaleCountGauge = Gauge.builder("matching_queue_female_count",
+                () -> queueFemaleCount.get())
+                .description("Top-50 후보 중 WAITING 상태인 여성 사용자 수")
                 .register(meterRegistry);
 
         running = true;
@@ -117,8 +144,27 @@ public class MatchingWorker {
         List<String> candidates = redisService.getTopCandidates(TOP_CANDIDATES_COUNT);
         if (candidates.isEmpty()) {
             matchFailCount.increment();
+            // 성별 카운터 초기화
+            queueMaleCount.set(0);
+            queueFemaleCount.set(0);
             return;
         }
+
+        // 성별 분포 계산
+        int maleCount = 0;
+        int femaleCount = 0;
+        for (String userId : candidates) {
+            if (isWaiting(userId)) {
+                String gender = redisService.getGender(userId);
+                if ("male".equals(gender)) {
+                    maleCount++;
+                } else if ("female".equals(gender)) {
+                    femaleCount++;
+                }
+            }
+        }
+        queueMaleCount.set(maleCount);
+        queueFemaleCount.set(femaleCount);
 
         int matchCount = 0;
 
@@ -173,6 +219,20 @@ public class MatchingWorker {
                     log.info("Matched users: {} and {}", userA, userB);
                     matchSuccessCount.increment();
                     matchCount++;
+
+                    // 매칭 결정 시간 측정
+                    Long lastJoinAtA = redisService.getLastJoinAt(userA);
+                    Long lastJoinAtB = redisService.getLastJoinAt(userB);
+                    long now = System.currentTimeMillis();
+
+                    if (lastJoinAtA != null) {
+                        long decisionTimeA = now - lastJoinAtA;
+                        matchDecisionLatencyTimer.record(decisionTimeA, TimeUnit.MILLISECONDS);
+                    }
+                    if (lastJoinAtB != null) {
+                        long decisionTimeB = now - lastJoinAtB;
+                        matchDecisionLatencyTimer.record(decisionTimeB, TimeUnit.MILLISECONDS);
+                    }
 
                     // Step 5: Postgres에 매칭 이력 저장
                     saveMatchHistory(userA, userB);
