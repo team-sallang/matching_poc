@@ -4,12 +4,14 @@
 
 문서 목
 
-본 문서는 Spring Boot 단일 서버 환경에서 동작하는 Redis 기반 1:1 매칭 로직의 구조 및 처리 흐름을 정의한다. 이 문서는 매칭 로직 그 자체만을 설명하며, 연결(WebRTC), 시그널링, 인증, UI 등 다른 시스템은 범위에 포함되지 않는다.
+본 문서는 Spring Boot 단일 서버 환경에서 동작하는 1:1 매칭 로직의 구조 및 처리 흐름을 정의한다. 이 문서는 매칭 로직 그 자체만을 설명하며, 연결(WebRTC), 시그널링, 인증, UI 등 다른 시스템은 범위에 포함되지 않는다.
+
+**참고**: 이 문서는 이전 Redis 기반 시스템에 대한 설명입니다. 현재는 PostgreSQL 기반 시스템으로 전환 중입니다.
 
 목적은 다음과 같다.
 
 - 효율적인 매칭 큐 운영 방식 정의
-- Redis 기반 상태/대기열 저장 구조 정의
+- 상태/대기열 저장 구조 정의
 - 단일 서버 워커 기반 매칭 알고리즘 설명
 - join/leave/status API 기준 정의
 - 성능 요구사항(매칭 속도) 제시
@@ -18,28 +20,27 @@
 
 시스템 범위 :
 
-- 실 서비스에서 Redis를 써야 하는지 판단 근거 확보
+- 실 서비스에서 적절한 매칭 시스템 구조 판단 근거 확보
 - 매칭 필터가 늘어날 때 해당 구조가 유리한지 판단.
 - **1,000 VU 기준**, 처리 속도와 안정성 확인
 
 > 버전 기준 : Gradle 8.14.3 / Spring Boot 3.4 / Java 17
 >
-> **Infra: Docker Swarm + PostgreSQL + Redis + Prometheus + Grafana + Loki (PLG Stack)**
+> **Infra: Docker Swarm + PostgreSQL + Prometheus + Grafana + Loki (PLG Stack)**
 
 ## 1.2 실험 구조
 
-### 실험 제안 구조 : Redis 기반 매칭 구조 (분산 가능 모델)
+### 실험 제안 구조 : PostgreSQL 기반 매칭 구조
 
 ```scss
-K6 → Spring Boot → Redis(ZSET)
+K6 → Spring Boot → PostgreSQL
                      ↳ Worker
 ```
 
 - 특징
   - 대기자 정렬/우선순위/만료 등 확장이 쉽다.
   - 수평 확장 가능
-  - 원자성 보장 → 경합 해결 용이
-  - 하지만 Redis I/O 비용 발생
+  - 원자성 보장 → 경합 해결 용이 (FOR UPDATE SKIP LOCKED)
 
 ## 1.3 목표 (Goal)
 
@@ -54,7 +55,7 @@ K6 → Spring Boot → Redis(ZSET)
    → 음성 매칭 특성상 200~300ms 안에 매칭 결정되도록 설계.
 
 3. 단일 서버 환경에서 스레드 기반 Worker가 매칭을 처리한다.
-4. Redis를 사용하여 재시작에도 대기열 상태를 유지한다.
+4. PostgreSQL을 사용하여 재시작에도 대기열 상태를 유지한다.
 
 ## 1.4 매칭 로직이 수행하는 역할
 
@@ -302,7 +303,7 @@ API 호출은 **모두 k6 Load Generator**를 사용하여 시뮬레이션한다
    - 매칭 이력 영구 저장소
    - 운영/통계/조회 목적
 
-API 서버(Spring Boot)는 JoinQueue / LeaveQueue / Status / ACK / History API를 제공하며,
+API 서버(Spring Boot)는 JoinQueue / LeaveQueue / Status / ACK API를 제공하며,
 
 매칭 처리 자체는 Worker가 전담한다.
 
@@ -320,11 +321,9 @@ API 서버(Spring Boot)는 JoinQueue / LeaveQueue / Status / ACK / History API�
 - `POST /queue/leave` → WAITING → IDLE
 - `GET /queue/status` → Redis 상태 조회
 - `POST /queue/ack` → MATCHED 처리 종료
-- `GET /history` → Postgres 이력 조회
 - 특징:
   - JoinQueue 시 debounce(1초) 적용
   - 상태 조회는 오직 Redis 조회
-  - 이력 조회는 오직 Postgres 조회
 
 ---
 
