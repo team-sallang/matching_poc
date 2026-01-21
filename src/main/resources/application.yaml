@@ -1,9 +1,30 @@
 spring:
   application:
     name: matching_poc
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+  flyway:
+    locations: classpath:db/migration
+    # 기존 DB에 Flyway 적용 시: SPRING_FLYWAY_BASELINE_ON_MIGRATE=true (env)
+    baseline-on-migrate: ${SPRING_FLYWAY_BASELINE_ON_MIGRATE:false}
   docker:
     compose:
       enabled: false # Swarm 모드에서는 사용하지 않음
+  task:
+    scheduling:
+      pool:
+        # 1 = 단일 스레드. fixedDelay로 이전 실행 완료 후 다음 실행만 수행. 중복 실행·겹침 방지.
+        size: 1
+
+matching:
+  schedule:
+    fixed-delay: 1000 # 1초. 이전 runMatchingLoop 종료 후 1초 뒤 다음 실행.
 
 management:
   endpoints:
