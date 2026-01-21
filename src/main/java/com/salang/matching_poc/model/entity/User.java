@@ -1,18 +1,26 @@
 package com.salang.matching_poc.model.entity;
 
+import java.time.LocalDate;
+import java.util.UUID;
+
 import com.salang.matching_poc.model.entity.base.BaseTimeEntity;
 import com.salang.matching_poc.model.enums.Gender;
 import com.salang.matching_poc.model.enums.Region;
 import com.salang.matching_poc.model.enums.Tier;
-import jakarta.persistence.*;
+
+import org.hibernate.annotations.GenericGenerator;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.GenericGenerator;
-
-import java.time.LocalDate;
-import java.util.UUID;
 
 @Entity
 @Table(name = "users")
@@ -23,7 +31,6 @@ public class User extends BaseTimeEntity {
   @Id
   @GeneratedValue(generator = "uuid2")
   @GenericGenerator(name = "uuid2", strategy = "uuid2")
-  @Column(columnDefinition = "BINARY(16)")
   private UUID id;
 
   @Column(length = 50, unique = true, nullable = false)

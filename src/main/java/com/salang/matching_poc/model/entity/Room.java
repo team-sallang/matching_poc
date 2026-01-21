@@ -1,14 +1,22 @@
 package com.salang.matching_poc.model.entity;
 
+import java.util.UUID;
+
 import com.salang.matching_poc.model.entity.base.BaseTimeEntity;
-import jakarta.persistence.*;
+
+import org.hibernate.annotations.GenericGenerator;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.GenericGenerator;
-
-import java.util.UUID;
 
 @Entity
 @Table(name = "rooms")
@@ -19,7 +27,6 @@ public class Room extends BaseTimeEntity {
     @Id
     @GeneratedValue(generator = "uuid2")
     @GenericGenerator(name = "uuid2", strategy = "uuid2")
-    @Column(columnDefinition = "BINARY(16)")
     private UUID roomId;
 
     @ManyToOne(fetch = FetchType.LAZY)

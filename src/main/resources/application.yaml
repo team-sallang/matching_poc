@@ -8,7 +8,7 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
   flyway:
     locations: classpath:db/migration
     # 기존 DB에 Flyway 적용 시: SPRING_FLYWAY_BASELINE_ON_MIGRATE=true (env)
