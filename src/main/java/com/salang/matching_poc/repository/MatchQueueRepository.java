@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -120,4 +121,14 @@ public interface MatchQueueRepository extends JpaRepository<MatchQueue, Long> {
         Optional<MatchQueue> findPhase5Match(
                         @Param("userId") UUID userId,
                         @Param("status") String status);
+
+        /**
+         * status=oldStatus인 레코드를 newStatus로 원자적으로 변경.
+         * @return 변경된 행 수 (2여야 매칭 확정 성공)
+         */
+        @Modifying(clearAutomatically = true)
+        @Query("UPDATE MatchQueue mq SET mq.status = :newStatus WHERE mq.userId IN :userIds AND mq.status = :oldStatus")
+        int updateStatusIf(@Param("userIds") List<UUID> userIds,
+                        @Param("oldStatus") MatchStatus oldStatus,
+                        @Param("newStatus") MatchStatus newStatus);
 }
