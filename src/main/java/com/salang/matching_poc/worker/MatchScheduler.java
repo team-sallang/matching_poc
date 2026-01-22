@@ -15,6 +15,7 @@ import static com.salang.matching_poc.constants.MatchingConstants.WAITING_STATUS
 import com.salang.matching_poc.model.entity.MatchQueue;
 import com.salang.matching_poc.model.enums.MatchStatus;
 import com.salang.matching_poc.repository.MatchQueueRepository;
+import com.salang.matching_poc.service.MatchQueueMatchFinder;
 import com.salang.matching_poc.service.MatchService;
 
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class MatchScheduler {
 
     private final MatchQueueRepository matchQueueRepository;
     private final MatchService matchService;
+    private final MatchQueueMatchFinder matchQueueMatchFinder;
 
     /*
      * 실행 주기 1초 : 판단 근거 아자르 주기 참고.
@@ -67,25 +69,25 @@ public class MatchScheduler {
         long s = ChronoUnit.SECONDS.between(requester.getCreatedAt(), LocalDateTime.now());
 
         if (s >= 30) {
-            return matchQueueRepository.findPhase5Match(requester.getUserId(), WAITING_STATUS);
+            return matchQueueMatchFinder.findPhase5Match(requester.getUserId(), WAITING_STATUS);
         }
         if (s >= 20) {
-            return matchQueueRepository.findPhase4Match(
+            return matchQueueMatchFinder.findPhase4Match(
                     requester.getUserId(), requester.getGender().name(), EXCLUDED_TIER, WAITING_STATUS);
         }
         if (s >= 10) {
-            return matchQueueRepository.findPhase3Match(
+            return matchQueueMatchFinder.findPhase3Match(
                     requester.getUserId(), requester.getGender().name(),
                     requester.getBirthYear() - AGE_TOLERANCE_YEARS, requester.getBirthYear() + AGE_TOLERANCE_YEARS,
                     EXCLUDED_TIER, WAITING_STATUS);
         }
         if (s >= 5) {
-            return matchQueueRepository.findPhase2Match(
+            return matchQueueMatchFinder.findPhase2Match(
                     requester.getUserId(), requester.getGender().name(), requester.getRegion().name(),
                     requester.getBirthYear() - AGE_TOLERANCE_YEARS, requester.getBirthYear() + AGE_TOLERANCE_YEARS,
                     EXCLUDED_TIER, WAITING_STATUS);
         }
-        return matchQueueRepository.findPhase1Match(
+        return matchQueueMatchFinder.findPhase1Match(
                 requester.getUserId(), requester.getGender().name(), requester.getRegion().name(),
                 requester.getBirthYear() - AGE_TOLERANCE_YEARS, requester.getBirthYear() + AGE_TOLERANCE_YEARS,
                 requester.getHobbyIds(), EXCLUDED_TIER, WAITING_STATUS);

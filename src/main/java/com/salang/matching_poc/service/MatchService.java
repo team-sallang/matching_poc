@@ -36,6 +36,7 @@ public class MatchService {
     private final UserHobbyRepository userHobbyRepository;
     private final MatchQueueRepository matchQueueRepository;
     private final RoomRepository roomRepository;
+    private final MatchQueueMatchFinder matchQueueMatchFinder;
 
     @Transactional
     public MatchResponse<?> requestMatch(MatchRequest request) {
@@ -103,7 +104,7 @@ public class MatchService {
     private Optional<MatchQueue> findInterceptPartner(User requester) {
         Integer[] hobbyIds = loadHobbyIds(requester);
         int birthYear = requester.getBirthDate().getYear();
-        return matchQueueRepository.findPhase1Match(
+        return matchQueueMatchFinder.findPhase1Match(
                 requester.getId(),
                 requester.getGender().name(),
                 requester.getRegion().name(),
