@@ -13,6 +13,8 @@ spring:
     locations: classpath:db/migration
     # 기존 DB에 Flyway 적용 시: SPRING_FLYWAY_BASELINE_ON_MIGRATE=true (env)
     baseline-on-migrate: ${SPRING_FLYWAY_BASELINE_ON_MIGRATE:false}
+    out-of-order: true  # 테이블 삭제 시 자동 재생성
+    validate-on-migrate: true  # 스키마 검증 유지
   docker:
     compose:
       enabled: false # Swarm 모드에서는 사용하지 않음
@@ -43,3 +45,6 @@ logging:
   level:
     root: INFO
     com.salang.matching_poc: DEBUG
+    com.salang.matching_poc.worker.MatchScheduler: ERROR
+    # SQL 로그는 기본적으로 OFF (필요시 DEBUG로 변경)
+    org.hibernate.SQL: OFF

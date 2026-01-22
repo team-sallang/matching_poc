@@ -50,7 +50,7 @@ public class MatchQueue {
     private MatchStatus status = MatchStatus.WAITING;
 
     @JdbcTypeCode(SqlTypes.ARRAY)
-    @Column(name = "hobby_ids", columnDefinition = "integer[]")
+    @Column(name = "hobby_ids")
     private Integer[] hobbyIds;
 
     @Enumerated(EnumType.STRING)

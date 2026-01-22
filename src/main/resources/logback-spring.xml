@@ -39,7 +39,7 @@
     <logger name="org.springframework.security" level="DEBUG"/>
     
     <!-- JPA/Hibernate Logger -->
-    <logger name="org.hibernate.SQL" level="DEBUG"/>
+    <!-- SQL 로그는 application.yaml의 logging.level.org.hibernate.SQL로 제어 -->
     <!-- 민감 데이터 노출 방지를 위해 기본 바인더 TRACE 로깅은 비활성화 -->
     <!-- <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/> -->
 </configuration>
