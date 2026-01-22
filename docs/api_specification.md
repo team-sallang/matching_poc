@@ -41,6 +41,16 @@
           }
         }
         ```
+    - **`404 Not Found` (사용자 없음)**
+        ```json
+        {
+          "status": "ERROR",
+          "error": {
+            "code": "USER_NOT_FOUND",
+            "message": "해당 사용자를 찾을 수 없습니다."
+          }
+        }
+        ```
     - **`409 Conflict` (이미 대기열에 있거나 매칭된 상태)**
         ```json
         {
