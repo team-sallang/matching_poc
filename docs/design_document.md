@@ -39,7 +39,7 @@ GIN 인덱스를 적극 활용**한 하이브리드 매칭 방식을 도입하�
 
 ### 3.1. 아키텍처 흐름도
 
-```
+```plaintext
 [Client] <--Supabase Realtime-- [API Server (Spring Boot)] <--> [Database (PostgreSQL)]
    |         (Matched Event)             |                         ^
    |                                     |                         |
@@ -75,14 +75,14 @@ GIN 인덱스를 적극 활용**한 하이브리드 매칭 방식을 도입하�
 
 **Backend (Spring Boot)**
 
-- [ ] `match_queue` 엔티티 및 Repository 생성 (Native Query 필수)
-- [ ] MatchService.findMatch() 구현: `FOR UPDATE SKIP LOCKED` 적용 확인
-- [ ] MatchScheduler 구현: 1초 주기, 5단계 조건 완화 로직 적용
+- [O] `match_queue` 엔티티 및 Repository 생성 (Native Query 필수)
+- [O] MatchService.findMatch() 구현: `FOR UPDATE SKIP LOCKED` 적용 확인
+- [O] MatchScheduler 구현: 1초 주기, 5단계 조건 완화 로직 적용
 - [ ] 점수 산정 로직(ScoreService) 구현
 
 **Frontend & Infra**
 
-- [ ] Supabase Realtime 활성화: `rooms` 테이블의 INSERT 이벤트 구독 설정
+- [O] Supabase Realtime 활성화: `rooms` 테이블의 INSERT 이벤트 구독 설정
 - [ ] API 연동 (`POST /api/v1/match`, `socket.on('INSERT', 'rooms')`)
 
 **Verification (검증)**
