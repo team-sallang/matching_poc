@@ -1,0 +1,66 @@
+package com.salang.matching_poc.model.entity;
+
+import java.time.LocalDate;
+import java.util.UUID;
+
+import com.salang.matching_poc.model.entity.base.BaseTimeEntity;
+import com.salang.matching_poc.model.enums.Gender;
+import com.salang.matching_poc.model.enums.Region;
+import com.salang.matching_poc.model.enums.Tier;
+
+import org.hibernate.annotations.GenericGenerator;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "users")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class User extends BaseTimeEntity {
+
+  @Id
+  @GeneratedValue(generator = "uuid2")
+  @GenericGenerator(name = "uuid2", strategy = "uuid2")
+  private UUID id;
+
+  @Column(length = 50, unique = true, nullable = false)
+  private String nickname;
+
+  @Enumerated(EnumType.STRING)
+  @Column(length = 10, nullable = false)
+  private Gender gender;
+
+  @Column(nullable = false)
+  private LocalDate birthDate;
+
+  @Enumerated(EnumType.STRING)
+  @Column(length = 50, nullable = false)
+  private Region region;
+
+  @Column(nullable = false)
+  private Integer totalScore;
+
+  @Enumerated(EnumType.STRING)
+  @Column(length = 20, nullable = false)
+  private Tier tier;
+
+  @Builder
+  public User(String nickname, Gender gender, LocalDate birthDate, Region region) {
+    this.nickname = nickname;
+    this.gender = gender;
+    this.birthDate = birthDate;
+    this.region = region;
+    this.totalScore = 0;
+    this.tier = Tier.SPROUT;
+  }
+}

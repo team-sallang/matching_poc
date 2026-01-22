@@ -1,6 +1,5 @@
 .metals
 .env
-scripts/k6/test-users.json
 logs/
 HELP.md
 .gradle
@@ -8,6 +7,9 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
+supabase/.branches
+supabase/.temp
+
 
 ### STS ###
 .apt_generated
