@@ -122,4 +122,9 @@ CROSS JOIN LATERAL (
 ) h
 WHERE u.nickname NOT IN ('test_user', 'partner_user', 'tier_fruit', 'tier_petal', 'tier_wilting', 'tier_fertilizer')
   AND u.nickname LIKE 'user_%'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM user_hobbies uh
+    WHERE uh.user_id = u.id
+  )
 ON CONFLICT (user_id, hobby_id) DO NOTHING;
