@@ -65,66 +65,42 @@ WHERE NOT EXISTS (
     SELECT 1 FROM hobbies WHERE hobbies.name = v.name
 );
 
--- 2-1. 고정 테스트 사용자 (예측 가능한 데이터) - 매칭 테스트용
-INSERT INTO users (id, nickname, gender, birth_date, region, total_score, tier, created_at, updated_at) VALUES
--- 매칭 테스트용 사용자 (공통 취미 보유)
-('00000000-0000-0000-0000-000000000001'::uuid, 'test_user', 'MALE', '1995-01-01', 'SEOUL', 0, 'SPROUT', now(), now()),
-('00000000-0000-0000-0000-000000000002'::uuid, 'partner_user', 'FEMALE', '1996-01-01', 'SEOUL', 0, 'SPROUT', now(), now()),
--- 다양한 Tier 테스트용
-('00000000-0000-0000-0000-000000000003'::uuid, 'tier_fruit', 'MALE', '1990-01-01', 'SEOUL', 25, 'FRUIT', now(), now()),
-('00000000-0000-0000-0000-000000000004'::uuid, 'tier_petal', 'FEMALE', '1992-01-01', 'BUSAN', 15, 'PETAL', now(), now()),
-('00000000-0000-0000-0000-000000000005'::uuid, 'tier_wilting', 'MALE', '1985-01-01', 'DAEGU', -15, 'WILTING', now(), now()),
-('00000000-0000-0000-0000-000000000006'::uuid, 'tier_fertilizer', 'FEMALE', '1980-01-01', 'GWANGJU', -25, 'FERTILIZER', now(), now())
-ON CONFLICT (nickname) DO UPDATE SET
-    gender = EXCLUDED.gender,
-    birth_date = EXCLUDED.birth_date,
-    region = EXCLUDED.region,
-    total_score = EXCLUDED.total_score,
-    tier = EXCLUDED.tier,
-    updated_at = now();
+-- 2. 기존 사용자/매칭 데이터 초기화 (동시성 테스트용)
+TRUNCATE TABLE match_queue, user_hobbies, rooms, users RESTART IDENTITY;
 
--- 2-2. users 200명 (랜덤 - 기존 유지)
+-- 3-1. 고정 테스트 사용자 10명 (확인용)
+INSERT INTO users (id, nickname, gender, birth_date, region, total_score, tier, created_at, updated_at) VALUES
+('00000000-0000-0000-0000-000000000001'::uuid, 'fixed_user_01', 'MALE',   '1995-01-01', 'SEOUL', 0, 'SPROUT', now(), now()),
+('00000000-0000-0000-0000-000000000002'::uuid, 'fixed_user_02', 'FEMALE', '1995-01-01', 'SEOUL', 0, 'SPROUT', now(), now()),
+('00000000-0000-0000-0000-000000000003'::uuid, 'fixed_user_03', 'MALE',   '1995-01-01', 'SEOUL', 0, 'SPROUT', now(), now()),
+('00000000-0000-0000-0000-000000000004'::uuid, 'fixed_user_04', 'FEMALE', '1995-01-01', 'SEOUL', 0, 'SPROUT', now(), now()),
+('00000000-0000-0000-0000-000000000005'::uuid, 'fixed_user_05', 'MALE',   '1995-01-01', 'SEOUL', 0, 'SPROUT', now(), now()),
+('00000000-0000-0000-0000-000000000006'::uuid, 'fixed_user_06', 'FEMALE', '1995-01-01', 'SEOUL', 0, 'SPROUT', now(), now()),
+('00000000-0000-0000-0000-000000000007'::uuid, 'fixed_user_07', 'MALE',   '1995-01-01', 'SEOUL', 0, 'SPROUT', now(), now()),
+('00000000-0000-0000-0000-000000000008'::uuid, 'fixed_user_08', 'FEMALE', '1995-01-01', 'SEOUL', 0, 'SPROUT', now(), now()),
+('00000000-0000-0000-0000-000000000009'::uuid, 'fixed_user_09', 'MALE',   '1995-01-01', 'SEOUL', 0, 'SPROUT', now(), now()),
+('00000000-0000-0000-0000-000000000010'::uuid, 'fixed_user_10', 'FEMALE', '1995-01-01', 'SEOUL', 0, 'SPROUT', now(), now());
+
+-- 3-2. 동시성 테스트용 동일 조건 사용자 1000명 (gender 50:50)
 INSERT INTO users (id, nickname, gender, birth_date, region, total_score, tier, created_at, updated_at)
 SELECT
-  gen_random_uuid(),
-  'user_' || i,
-  (ARRAY['MALE','FEMALE'])[1 + (i % 2)],
-  (DATE '1990-01-01' + (i % 12000)::int)::date,
-  (ARRAY['SEOUL','GYEONGGI','INCHEON','BUSAN','DAEGU','GWANGJU','JEJU','GYEONGNAM','JEONBUK'])[1 + (i % 9)],
+  ('00000000-0000-0000-0000-' || lpad((1000 + i)::text, 12, '0'))::uuid,
+  'load_user_' || lpad(i::text, 4, '0'),
+  CASE WHEN i % 2 = 0 THEN 'FEMALE' ELSE 'MALE' END,
+  DATE '1995-01-01',
+  'SEOUL',
   0,
   'SPROUT',
   now(),
   now()
-FROM generate_series(1, 200) i
+FROM generate_series(1, 1000) i
 ON CONFLICT (nickname) DO NOTHING;
 
--- 3-1. 고정 테스트 사용자의 취미 매핑 (공통 취미 보유 - 매칭 테스트용)
+-- 3-3. 동시성 테스트용 동일 조건 취미 매핑 (고정 3개)
 INSERT INTO user_hobbies (user_id, hobby_id, created_at, updated_at)
 SELECT u.id, h.id, now(), now()
 FROM users u
-CROSS JOIN hobbies h
-WHERE (u.nickname = 'test_user' AND h.name IN ('축구', '영화 시청', '독서'))
-   OR (u.nickname = 'partner_user' AND h.name IN ('축구', '영화 시청', '요리'))
-   OR (u.nickname = 'tier_fruit' AND h.name IN ('등산', '독서', '요리', '여행'))
-   OR (u.nickname = 'tier_petal' AND h.name IN ('영화 시청', '요가', '베이킹'))
-   OR (u.nickname = 'tier_wilting' AND h.name IN ('독서', '명상'))
-   OR (u.nickname = 'tier_fertilizer' AND h.name IN ('독서'))
-ON CONFLICT (user_id, hobby_id) DO NOTHING;
-
--- 3-2. user_hobbies: 유저당 랜덤 3~5개 취미 (기존 유지 - 고정 사용자 제외)
-INSERT INTO user_hobbies (user_id, hobby_id, created_at, updated_at)
-SELECT u.id, h.id, now(), now()
-FROM users u
-CROSS JOIN LATERAL (
-  SELECT id FROM hobbies
-  ORDER BY random()
-  LIMIT 3 + (floor(random() * 3)::int)
-) h
-WHERE u.nickname NOT IN ('test_user', 'partner_user', 'tier_fruit', 'tier_petal', 'tier_wilting', 'tier_fertilizer')
-  AND u.nickname LIKE 'user_%'
-  AND NOT EXISTS (
-    SELECT 1
-    FROM user_hobbies uh
-    WHERE uh.user_id = u.id
-  )
+JOIN hobbies h ON h.name IN ('축구', '영화 시청', '독서')
+WHERE u.nickname LIKE 'load_user_%'
+   OR u.nickname LIKE 'fixed_user_%'
 ON CONFLICT (user_id, hobby_id) DO NOTHING;
