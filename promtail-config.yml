@@ -24,6 +24,7 @@ scrape_configs:
             thread: thread
             logger: logger_name
             message: message
+            stack_trace: stack_trace  
             application: application
             profile: profile
       - labels:
