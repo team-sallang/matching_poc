@@ -1,5 +1,5 @@
 -- 취미 + 유저 200명 + user_hobbies(유저당 랜덤 3~5). docs/category.md, ERD 기반.
--- 실행 전: Flyway로 users, hobbies, user_hobbies, rooms 존재해야 함. match_queue는 FK 없음.
+-- 실행 전: Supabase migrations(create_core_tables) 적용 후 users, hobbies, user_hobbies, rooms 존재해야 함. match_queue는 FK 없음.
 -- 이 스크립트는 idempotent하게 작성되어 여러 번 실행해도 안전합니다.
 
 -- 1. hobbies (category.md) - 중복 방지: name이 이미 존재하면 건너뜀
