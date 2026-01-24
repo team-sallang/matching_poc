@@ -14,6 +14,7 @@ import com.salang.matching_poc.constants.MatchingConstants;
 import com.salang.matching_poc.controller.dto.MatchRequest;
 import com.salang.matching_poc.controller.dto.MatchResponse;
 import com.salang.matching_poc.exception.AlreadyInQueueException;
+import com.salang.matching_poc.exception.MatchAlreadyProcessedException;
 import com.salang.matching_poc.exception.UserNotFoundException;
 import com.salang.matching_poc.exception.UserNotInQueueException;
 import com.salang.matching_poc.model.entity.MatchQueue;
@@ -83,7 +84,7 @@ public class MatchService {
         int updated = matchQueueRepository.updateStatusIf(
                 List.of(user1Id, user2Id), MatchStatus.WAITING, MatchStatus.MATCHED);
         if (updated != 2) {
-            throw new IllegalStateException(
+            throw new MatchAlreadyProcessedException(
                     "Match confirmation failed: one or both users already matched. updated=" + updated);
         }
         User user1 = userRepository.findById(user1Id).orElseThrow(UserNotFoundException::new);

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import static com.salang.matching_poc.constants.MatchingConstants.AGE_TOLERANCE_YEARS;
 import static com.salang.matching_poc.constants.MatchingConstants.EXCLUDED_TIER;
 import static com.salang.matching_poc.constants.MatchingConstants.WAITING_STATUS;
+import com.salang.matching_poc.exception.MatchAlreadyProcessedException;
 import com.salang.matching_poc.model.entity.MatchQueue;
 import com.salang.matching_poc.model.enums.MatchStatus;
 import com.salang.matching_poc.repository.MatchQueueRepository;
@@ -52,6 +53,8 @@ public class MatchScheduler {
 
             try {
                 findAndProcessMatch(requester);
+            } catch (MatchAlreadyProcessedException e) {
+                log.warn("매칭 경합 감지. 사용자 ID: {}", requester.getUserId());
             } catch (Exception e) {
                 log.error("매칭 처리 중 오류 발생. 사용자 ID: {}", requester.getUserId(), e);
             }

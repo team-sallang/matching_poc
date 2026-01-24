@@ -8,8 +8,6 @@ import com.salang.matching_poc.model.enums.Gender;
 import com.salang.matching_poc.model.enums.Region;
 import com.salang.matching_poc.model.enums.Tier;
 
-import org.hibernate.annotations.GenericGenerator;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -30,7 +28,6 @@ public class User extends BaseTimeEntity {
 
   @Id
   @GeneratedValue(generator = "uuid2")
-  @GenericGenerator(name = "uuid2", strategy = "uuid2")
   private UUID id;
 
   @Column(length = 50, unique = true, nullable = false)
