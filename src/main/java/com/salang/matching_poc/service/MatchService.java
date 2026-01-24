@@ -8,6 +8,8 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import io.micrometer.core.annotation.Timed;
+
 import com.salang.matching_poc.constants.MatchingConstants;
 import com.salang.matching_poc.controller.dto.MatchRequest;
 import com.salang.matching_poc.controller.dto.MatchResponse;
@@ -38,6 +40,7 @@ public class MatchService {
     private final RoomRepository roomRepository;
     private final MatchQueueMatchFinder matchQueueMatchFinder;
 
+    @Timed(value = "match.request", description = "Time taken to process a match request")
     @Transactional
     public MatchResponse<?> requestMatch(MatchRequest request) {
         UUID userId = request.userId();
@@ -74,6 +77,7 @@ public class MatchService {
      * 스케줄러/인터셉트에서 파트너 확정 후 호출. WAITING→MATCHED 조건부 업데이트로 원자성 보장.
      * updated != 2 이면 이미 타 스레드/인스턴스에서 매칭된 경우 → 롤백.
      */
+    @Timed(value = "match.confirm", description = "Time taken to confirm a match")
     @Transactional
     public void confirmMatch(UUID user1Id, UUID user2Id) {
         int updated = matchQueueRepository.updateStatusIf(
