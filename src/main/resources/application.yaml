@@ -30,7 +30,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health,info,prometheus,metrics
   tracing:
     sampling:
       probability: 1.0
@@ -42,6 +42,15 @@ management:
     metrics:
       export:
         enabled: true
+  observations:
+    http:
+      server:
+        requests:
+          name: http.server.requests
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
 
 logging:
   file:

@@ -551,8 +551,8 @@
                         "type": "prometheus",
                         "uid": "prometheus"
                     },
-                    "editorMode": "code",
-                    "expr": "sum by (status, outcome, exception) (\r\n  rate(http_server_requests_seconds_count{uri=\"/api/v1/match\",method=\"POST\"}[1m])\r\n)",
+                    "editorMode": "builder",
+                    "expr": "sum by(uri) (rate(http_server_requests_seconds_count{uri=\"/api/v1/match\", method=\"POST\"}[1m]))",
                     "legendFormat": "{{label_name}}",
                     "range": true,
                     "refId": "A"
@@ -960,5 +960,5 @@
     "timezone": "browser",
     "title": "동시성 테스트용 대시보드",
     "uid": "ad76f6w",
-    "version": 2
+    "version": 4
 }
