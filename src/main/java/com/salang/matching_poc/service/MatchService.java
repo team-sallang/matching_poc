@@ -8,8 +8,6 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import io.micrometer.core.annotation.Timed;
-
 import com.salang.matching_poc.constants.MatchingConstants;
 import com.salang.matching_poc.controller.dto.MatchRequest;
 import com.salang.matching_poc.controller.dto.MatchResponse;
@@ -27,6 +25,7 @@ import com.salang.matching_poc.repository.RoomRepository;
 import com.salang.matching_poc.repository.UserHobbyRepository;
 import com.salang.matching_poc.repository.UserRepository;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -40,8 +39,8 @@ public class MatchService {
     private final MatchQueueRepository matchQueueRepository;
     private final RoomRepository roomRepository;
     private final MatchQueueMatchFinder matchQueueMatchFinder;
+    private final MeterRegistry meterRegistry;
 
-    @Timed(value = "match.request", description = "Time taken to process a match request")
     @Transactional
     public MatchResponse<?> requestMatch(MatchRequest request) {
         UUID userId = request.userId();
@@ -59,6 +58,7 @@ public class MatchService {
 
     /** 즉시 매칭: room 생성, 파트너 MATCHED 처리 후 MatchResponse.matched 반환. */
     private MatchResponse<?> doInterceptAndReturn(User user, MatchQueue partner) {
+        meterRegistry.counter("match.request.immediate").increment();
         Room room = createRoom(user, partner.getUserId());
         partner.setStatus(MatchStatus.MATCHED);
         matchQueueRepository.save(partner);
@@ -70,6 +70,7 @@ public class MatchService {
     private MatchResponse<?> doEnqueueAndReturn(User user) {
         MatchQueue queued = buildQueueEntry(user);
         matchQueueRepository.save(queued);
+        meterRegistry.counter("match.request.enqueued").increment();
         return MatchResponse.waiting("매칭 대기열에 등록되었습니다. Supabase Realtime을 통해 매칭 결과를 기다려주세요.",
                 OffsetDateTime.now(MatchingConstants.ZONE_ASIA_SEOUL));
     }
@@ -78,12 +79,12 @@ public class MatchService {
      * 스케줄러/인터셉트에서 파트너 확정 후 호출. WAITING→MATCHED 조건부 업데이트로 원자성 보장.
      * updated != 2 이면 이미 타 스레드/인스턴스에서 매칭된 경우 → 롤백.
      */
-    @Timed(value = "match.confirm", description = "Time taken to confirm a match")
     @Transactional
     public void confirmMatch(UUID user1Id, UUID user2Id) {
         int updated = matchQueueRepository.updateStatusIf(
                 List.of(user1Id, user2Id), MatchStatus.WAITING, MatchStatus.MATCHED);
         if (updated != 2) {
+            meterRegistry.counter("match.confirm.conflict").increment();
             throw new MatchAlreadyProcessedException(
                     "Match confirmation failed: one or both users already matched. updated=" + updated);
         }
@@ -91,6 +92,7 @@ public class MatchService {
         User user2 = userRepository.findById(user2Id).orElseThrow(UserNotFoundException::new);
         Room room = Room.builder().user1(user1).user2(user2).build();
         roomRepository.save(room);
+        meterRegistry.counter("match.confirm.success").increment();
         log.info("매칭 성공! 사용자1: {}, 사용자2: {}", user1Id, user2Id);
         log.info("채팅방 생성 완료. Room ID: {}", room.getRoomId());
     }
@@ -104,6 +106,27 @@ public class MatchService {
             throw new UserNotInQueueException("이미 매칭되어 취소할 수 없습니다.");
         }
         matchQueueRepository.delete(queue);
+    }
+
+    @Transactional(readOnly = true)
+    public MatchResponse<?> getMatchStatus(UUID userId) {
+        Optional<Room> room = roomRepository.findFirstByUser1IdOrUser2Id(userId, userId);
+        if (room.isPresent()) {
+            OffsetDateTime matchedAt = room.get().getCreatedAt()
+                    .atZone(MatchingConstants.ZONE_ASIA_SEOUL)
+                    .toOffsetDateTime();
+            return MatchResponse.matched(room.get().getRoomId(), matchedAt);
+        }
+
+        Optional<MatchQueue> queue = matchQueueRepository.findByUserId(userId);
+        if (queue.isPresent()) {
+            OffsetDateTime queuedAt = queue.get().getCreatedAt()
+                    .atZone(MatchingConstants.ZONE_ASIA_SEOUL)
+                    .toOffsetDateTime();
+            return MatchResponse.waiting("대기 중", queuedAt);
+        }
+
+        throw new UserNotInQueueException("매칭 대기열에 존재하지 않습니다.");
     }
 
     private Optional<MatchQueue> findInterceptPartner(User requester) {

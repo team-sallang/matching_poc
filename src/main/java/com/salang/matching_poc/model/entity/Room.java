@@ -4,8 +4,6 @@ import java.util.UUID;
 
 import com.salang.matching_poc.model.entity.base.BaseTimeEntity;
 
-import org.hibernate.annotations.GenericGenerator;
-
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -26,7 +24,6 @@ public class Room extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(generator = "uuid2")
-    @GenericGenerator(name = "uuid2", strategy = "uuid2")
     private UUID roomId;
 
     @ManyToOne(fetch = FetchType.LAZY)
