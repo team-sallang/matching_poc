@@ -27,6 +27,8 @@ scrape_configs:
             stack_trace: stack_trace  
             application: application
             profile: profile
+            trace_id: trace_id
+            span_id: span_id
       - labels:
           level:
           application:

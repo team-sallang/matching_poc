@@ -17,6 +17,9 @@
         <file>logs/application.log</file>
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <customFields>{"application":"${appName}","profile":"${profile}"}</customFields>
+            <includeMdc>true</includeMdc>
+            <mdcKeyFieldName>traceId=trace_id</mdcKeyFieldName>
+            <mdcKeyFieldName>spanId=span_id</mdcKeyFieldName>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>logs/application-%d{yyyy-MM-dd}.log</fileNamePattern>
