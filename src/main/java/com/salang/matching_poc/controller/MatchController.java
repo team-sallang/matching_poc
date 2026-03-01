@@ -1,10 +1,14 @@
 package com.salang.matching_poc.controller;
 
 import org.springframework.http.ResponseEntity;
+import java.util.UUID;
+
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.salang.matching_poc.constants.MatchingConstants;
@@ -35,5 +39,11 @@ public class MatchController {
     public ResponseEntity<Void> cancelMatch(@RequestBody @Valid MatchRequest request) {
         matchService.cancelMatch(request);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/status")
+    public ResponseEntity<MatchResponse<?>> getMatchStatus(@RequestParam("user_id") UUID userId) {
+        MatchResponse<?> response = matchService.getMatchStatus(userId);
+        return ResponseEntity.ok(response);
     }
 }

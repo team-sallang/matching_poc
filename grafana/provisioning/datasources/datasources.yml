@@ -1,0 +1,52 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    jsonData:
+      timeInterval: 15s
+
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+
+  - name: Tempo
+    uid: tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    jsonData:
+      httpMethod: GET
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: "-1h"
+        spanEndTimeShift: "1h"
+        tags: ["job", "instance", "pod", "namespace"]
+        filterByTraceID: false
+        filterBySpanID: false
+        customQuery: true
+        query: '{job="salang-backend"} | json | trace_id="${__trace.traceId}"'
+      nodeGraph:
+        enabled: true
+      search:
+        hide: false
+
+  - name: Postgres
+    uid: postgres
+    type: postgres
+    access: proxy
+    url: ${POSTGRES_HOST}:5432
+    user: ${POSTGRES_USER}
+    isDefault: false
+    jsonData:
+      database: ${POSTGRES_DB}
+      sslmode: "require"
+    secureJsonData:
+      password: ${POSTGRES_PASSWORD}
+

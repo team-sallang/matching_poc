@@ -1,3 +1,10 @@
+server:
+  tomcat:
+    accept-count: 1000    # TCP backlog (기본 100 → 1000 VU 동시 부하 테스트용)
+    max-connections: 2000 # 동시 연결 최대 수 (기본 8192, 명시)
+    threads:
+      max: 400            # 워커 스레드 (기본 200 → 1000 VU 큐잉 처리 향상)
+
 spring:
   application:
     name: matching_poc
@@ -5,16 +12,14 @@ spring:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
+    hikari:
+      maximum-pool-size: 48   # Supabase Nano 직접 연결 한계(60)의 80%
+      minimum-idle: 5
+      connection-timeout: 30000
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: validate
-  flyway:
-    locations: classpath:db/migration
-    # 기존 DB에 Flyway 적용 시: SPRING_FLYWAY_BASELINE_ON_MIGRATE=true (env)
-    baseline-on-migrate: ${SPRING_FLYWAY_BASELINE_ON_MIGRATE:false}
-    out-of-order: true  # Flyway의 out-of-order는 이미 적용된 마이그레이션보다 낮은 버전의 마이그레이션 실행을 허용하는 속성
-    validate-on-migrate: true  # 스키마 검증 유지
   docker:
     compose:
       enabled: false # Swarm 모드에서는 사용하지 않음
@@ -32,11 +37,27 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health,info,prometheus,metrics
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${OTLP_ENDPOINT} # Windows 예약 포트(4240-4339) 회피: 14318 사용
+      transport: HTTP
   prometheus:
     metrics:
       export:
         enabled: true
+  observations:
+    http:
+      server:
+        requests:
+          name: http.server.requests
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
 
 logging:
   file:

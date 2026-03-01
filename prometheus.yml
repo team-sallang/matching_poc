@@ -3,14 +3,19 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
+  # Prometheus 자기 메트릭 (localhost는 컨테이너 내부 기준)
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Spring Boot 앱: 호스트에서 8080으로 실행할 때 (compose에 app 서비스 없음)
   - job_name: "spring-boot-app"
     metrics_path: "/actuator/prometheus"
+    scrape_interval: 15s
+    scrape_timeout: 10s
     static_configs:
-      - targets: 
-          - "app:8080"  # Docker 컨테이너에서 실행 시
-          - "host.docker.internal:8080"  # 로컬에서 실행 시 (Windows/Mac)
-        # Linux에서는 다음 중 하나를 사용:
-        # 1. host.docker.internal 대신 호스트 IP 주소 사용 (예: "172.17.0.1:8080")
-        # 2. 또는 Docker 네트워크 모드 host 사용
+      - targets:
+          - "host.docker.internal:8080"
         labels:
           application: "salang-backend"
+    # Linux: host.docker.internal 미지원 시 extra_hosts 또는 172.17.0.1:8080 등 호스트 IP 사용
