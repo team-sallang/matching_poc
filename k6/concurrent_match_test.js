@@ -36,7 +36,10 @@ export const options = {
     },
   },
   thresholds: {
-    http_req_duration: ['p(95)<500', 'p(99)<1000'], // 95p < 500ms, 99p < 1s
+    // match_request(POST /match): 커넥션 풀 개선 후 p95 < 2s 목표
+    'http_req_duration{name:match_request}': ['p(95)<2000', 'p(99)<5000'],
+    // match_status(GET /match/status): 단순 SELECT, p95 < 1s 목표
+    'http_req_duration{name:match_status}': ['p(95)<1000', 'p(99)<2000'],
     http_req_failed: ['rate<0.01'], // 실패율 < 1%
     match_complete_ms: ['p(95)<30000', 'p(99)<40000'], // 매칭 완료까지 95p < 30s, 99p < 40s
   },

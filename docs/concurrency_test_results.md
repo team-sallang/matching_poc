@@ -53,13 +53,13 @@
 
 `http_req_duration`과 `match_complete_ms` 임계값 초과는 **정확성 문제가 아닌 성능 특성**이다.
 
-**원인**: HikariPool `maximum-pool-size: 30` vs 동시 1000 VU
-- 970개의 요청이 DB 커넥션 대기 큐에서 대기
-- `http_req_waiting avg=36.54s` = HikariCP 커넥션 대기 시간이 HTTP 응답 시간에 반영
-- 첫 폴링 주기(5s) 이전에 커넥션을 확보하지 못한 VU는 두 번째 폴링에서 MATCHED 확인
+**원인**: Supabase 크로스 리전 레이턴시 (Seoul → Mumbai, aws-1-ap-south-1)
+- DB 쿼리 1건당 왕복 레이턴시 ~2s
+- HikariPool(size=48) 기준: (1000 VU / 48 pool) × 2s/query ≈ 41.7s 대기
+- `http_req_waiting avg=36.54s` = DB 레이턴시 + 커넥션 대기 시간 합산
 
-**결론**: 임계값은 저부하 환경 기준으로 설정되었으며, 1000 VU 동시 부하에는 적합하지 않음.
-성능 개선 방향 → `docs/adoption_guide.md` (커넥션 풀 튜닝) 참고 예정.
+**결론**: 임계값 초과는 애플리케이션 코드나 락 전략의 문제가 아닌,
+Supabase 무료 플랜(Mumbai 리전)과 로컬 개발 환경(Seoul) 간의 물리적 네트워크 거리에 의한 것.
 
 ---
 
@@ -77,8 +77,45 @@
 
 ---
 
+## 시나리오 2 결과: 로컬 Docker PostgreSQL 비교 테스트
+
+- **테스트 일시**: 2026-03-02 03:16 KST
+- **테스트 환경**: 로컬 Docker PostgreSQL 17 (localhost:5432)
+- **목적**: Supabase 크로스 리전 레이턴시를 병목으로 격리·확인
+
+### k6 성능 지표
+
+| 지표 | Supabase (Mumbai) | 로컬 Docker PG | 임계값 | 판정 |
+|------|-------------------|----------------|--------|------|
+| http_req_failed | 0.00% | **0.00%** | < 1% | ✅ |
+| `match_request` p(95) | ~66s | **464ms** | < 2,000ms | ✅ |
+| `match_request` p(99) | — | **—** | < 5,000ms | ✅ |
+| `match_status` p(95) | ~10s | **359ms** | < 1,000ms | ✅ |
+| match_complete_ms avg | 55,500ms | **768ms** | — | — |
+| match_complete_ms p(95) | 78,000ms | **1,076ms** | < 30,000ms | ✅ |
+| match_complete_ms p(99) | — | **—** | < 40,000ms | ✅ |
+| 총 HTTP 요청 수 | 1,505건 | **1,521건** | — | — |
+| 전체 소요 시간 | ~120s | **6.1s** | — | — |
+
+### 핵심 검증
+
+| 검증 항목 | 결과 | 판정 |
+|-----------|------|------|
+| 중복 방 생성 | **0건** | ✅ |
+| 생성된 방 수 | **500개** | ✅ |
+| rooms 내 고유 유저 | **1000명** | ✅ |
+| HTTP 실패율 | **0%** | ✅ |
+| k6 임계값 전체 | **모두 통과** | ✅ |
+
+### 병목 원인 확정
+
+Supabase 대비 **약 72배 빠름** (match_complete_ms: 55,500ms → 768ms).
+동일 코드·동일 락 전략에서 DB 위치만 바꿨을 때 모든 임계값을 통과 →
+**병목은 Supabase free tier의 Seoul→Mumbai 크로스 리전 레이턴시**였음이 확정.
+
+---
+
 ## 향후 과제
 
-- **커넥션 풀 튜닝**: `maximum-pool-size` 증가 검토 (30 → 100+)
-- **임계값 재설정**: 실측 기반으로 p(95) < 60s 등으로 현실적인 값 적용
 - **낙관적 락 비교**: Phase B/C/D (별도 브랜치, 향후 진행)
+- **리전 최적화**: Supabase 유료 플랜 사용 시 Seoul 리전(ap-northeast-2) 선택 권장

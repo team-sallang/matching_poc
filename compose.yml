@@ -105,6 +105,28 @@ services:
       restart_policy:
         condition: any
 
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - app-tier
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      restart_policy:
+        condition: any
+
 volumes:
   prometheus-data:
     driver: local
@@ -113,6 +135,8 @@ volumes:
   tempo-data:
     driver: local
   grafana-data:
+    driver: local
+  postgres-data:
     driver: local
 
 networks:
