@@ -23,6 +23,105 @@
     "panels": [
         {
             "datasource": {
+                "type": "tempo",
+                "uid": "tempo"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "align": "auto",
+                        "cellOptions": {
+                            "type": "auto"
+                        },
+                        "footer": {
+                            "reducers": []
+                        },
+                        "inspect": false
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": 0
+                            },
+                            {
+                                "color": "red",
+                                "value": 80
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 0
+            },
+            "id": 12,
+            "options": {
+                "cellHeight": "sm",
+                "showHeader": true
+            },
+            "pluginVersion": "12.2.0",
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "tempo",
+                        "uid": "tempo"
+                    },
+                    "filters": [
+                        {
+                            "id": "a66e15f7",
+                            "operator": "=",
+                            "scope": "span"
+                        },
+                        {
+                            "id": "service-name",
+                            "isCustomValue": false,
+                            "operator": "=",
+                            "scope": "resource",
+                            "tag": "service.name",
+                            "value": [
+                                "matching_poc"
+                            ],
+                            "valueType": "string"
+                        },
+                        {
+                            "id": "span-name",
+                            "isCustomValue": false,
+                            "operator": "=",
+                            "scope": "span",
+                            "tag": "name",
+                            "value": [
+                                "match.scheduler.loop"
+                            ],
+                            "valueType": "string"
+                        },
+                        {
+                            "id": "min-duration",
+                            "operator": ">",
+                            "tag": "duration",
+                            "value": "500ms",
+                            "valueType": "duration"
+                        }
+                    ],
+                    "limit": 20,
+                    "metricsQueryType": "range",
+                    "queryType": "traceqlSearch",
+                    "refId": "A",
+                    "serviceMapUseNativeHistograms": false,
+                    "tableType": "traces"
+                }
+            ],
+            "title": "병목 트레이스 테이블",
+            "type": "table"
+        },
+        {
+            "datasource": {
                 "type": "postgres",
                 "uid": "postgres"
             },
@@ -522,7 +621,32 @@
                     },
                     "unit": "reqps"
                 },
-                "overrides": []
+                "overrides": [
+                    {
+                        "__systemRef": "hideSeriesFrom",
+                        "matcher": {
+                            "id": "byNames",
+                            "options": {
+                                "mode": "exclude",
+                                "names": [
+                                    "{exception=\"none\", outcome=\"SUCCESS\", status=\"202\", uri=\"/api/v1/match\"}"
+                                ],
+                                "prefix": "All except:",
+                                "readOnly": true
+                            }
+                        },
+                        "properties": [
+                            {
+                                "id": "custom.hideFrom",
+                                "value": {
+                                    "legend": false,
+                                    "tooltip": true,
+                                    "viz": true
+                                }
+                            }
+                        ]
+                    }
+                ]
             },
             "gridPos": {
                 "h": 8,
@@ -552,8 +676,8 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "builder",
-                    "expr": "sum by(uri) (rate(http_server_requests_seconds_count{uri=\"/api/v1/match\", method=\"POST\"}[1m]))",
-                    "legendFormat": "{{label_name}}",
+                    "expr": "sum by(uri, outcome, status) (rate(http_server_requests_seconds_count{uri=\"/api/v1/match\", method=\"POST\"}[$__rate_interval]))",
+                    "legendFormat": "__auto",
                     "range": true,
                     "refId": "A"
                 }
@@ -562,7 +686,7 @@
             "type": "timeseries"
         },
         {
-            "collapsed": true,
+            "collapsed": false,
             "gridPos": {
                 "h": 1,
                 "w": 24,
@@ -570,316 +694,315 @@
                 "y": 14
             },
             "id": 7,
-            "panels": [
-                {
-                    "datasource": {
-                        "type": "grafana-postgresql-datasource",
-                        "uid": "postgres"
+            "panels": [],
+            "title": "DB Injection",
+            "type": "row"
+        },
+        {
+            "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "postgres"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
                     },
-                    "fieldConfig": {
-                        "defaults": {
-                            "color": {
-                                "mode": "palette-classic"
-                            },
-                            "custom": {
-                                "hideFrom": {
-                                    "legend": false,
-                                    "tooltip": false,
-                                    "viz": false
-                                }
-                            },
-                            "mappings": []
-                        },
-                        "overrides": []
-                    },
-                    "gridPos": {
-                        "h": 8,
-                        "w": 7,
-                        "x": 0,
-                        "y": 15
-                    },
-                    "id": 8,
-                    "options": {
-                        "displayLabels": [
-                            "percent"
-                        ],
-                        "legend": {
-                            "calcs": [],
-                            "displayMode": "list",
-                            "placement": "right",
-                            "showLegend": true,
-                            "values": []
-                        },
-                        "pieType": "pie",
-                        "reduceOptions": {
-                            "calcs": [
-                                "lastNotNull"
-                            ],
-                            "fields": "/.*/",
-                            "values": false
-                        },
-                        "sort": "desc",
-                        "tooltip": {
-                            "hideZeros": false,
-                            "mode": "single",
-                            "sort": "none"
+                    "custom": {
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
                         }
                     },
-                    "pluginVersion": "12.2.0",
-                    "targets": [
-                        {
-                            "dataset": "postgres",
-                            "datasource": {
-                                "type": "grafana-postgresql-datasource",
-                                "uid": "postgres"
-                            },
-                            "editorMode": "code",
-                            "format": "table",
-                            "rawQuery": true,
-                            "rawSql": "select\r\n  sum(case when state = 'active' then 1 else 0 end) as active,\r\n  sum(case when state = 'idle' then 1 else 0 end) as idle,\r\n  sum(case when wait_event_type is not null then 1 else 0 end) as waiting\r\nfrom pg_stat_activity\r\nwhere datname = current_database();",
-                            "refId": "A",
-                            "sql": {
-                                "columns": [
-                                    {
-                                        "parameters": [],
-                                        "type": "function"
-                                    }
-                                ],
-                                "groupBy": [
-                                    {
-                                        "property": {
-                                            "type": "string"
-                                        },
-                                        "type": "groupBy"
-                                    }
-                                ],
-                                "limit": 50
-                            }
-                        }
-                    ],
-                    "title": "활성/대기/비활성화 커넥션 수",
-                    "type": "piechart"
+                    "mappings": []
                 },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 7,
+                "x": 0,
+                "y": 15
+            },
+            "id": 8,
+            "options": {
+                "displayLabels": [
+                    "percent"
+                ],
+                "legend": {
+                    "calcs": [],
+                    "displayMode": "list",
+                    "placement": "right",
+                    "showLegend": true,
+                    "values": []
+                },
+                "pieType": "pie",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "/.*/",
+                    "values": false
+                },
+                "sort": "desc",
+                "tooltip": {
+                    "hideZeros": false,
+                    "mode": "single",
+                    "sort": "none"
+                }
+            },
+            "pluginVersion": "12.2.0",
+            "targets": [
                 {
+                    "dataset": "postgres",
                     "datasource": {
                         "type": "grafana-postgresql-datasource",
                         "uid": "postgres"
                     },
-                    "fieldConfig": {
-                        "defaults": {
-                            "mappings": [],
-                            "thresholds": {
-                                "mode": "percentage",
-                                "steps": [
-                                    {
-                                        "color": "green",
-                                        "value": 0
-                                    },
-                                    {
-                                        "color": "orange",
-                                        "value": 70
-                                    },
-                                    {
-                                        "color": "red",
-                                        "value": 85
-                                    }
-                                ]
+                    "editorMode": "code",
+                    "format": "table",
+                    "rawQuery": true,
+                    "rawSql": "select\r\n  sum(case when state = 'active' then 1 else 0 end) as active,\r\n  sum(case when state = 'idle' then 1 else 0 end) as idle,\r\n  sum(case when wait_event_type is not null then 1 else 0 end) as waiting\r\nfrom pg_stat_activity\r\nwhere datname = current_database();",
+                    "refId": "A",
+                    "sql": {
+                        "columns": [
+                            {
+                                "parameters": [],
+                                "type": "function"
                             }
-                        },
-                        "overrides": []
-                    },
-                    "gridPos": {
-                        "h": 8,
-                        "w": 7,
-                        "x": 7,
-                        "y": 15
-                    },
-                    "id": 9,
-                    "options": {
-                        "minVizHeight": 75,
-                        "minVizWidth": 75,
-                        "orientation": "auto",
-                        "reduceOptions": {
-                            "calcs": [],
-                            "fields": "",
-                            "values": true
-                        },
-                        "showThresholdLabels": false,
-                        "showThresholdMarkers": true,
-                        "sizing": "auto"
-                    },
-                    "pluginVersion": "12.2.0",
-                    "targets": [
-                        {
-                            "dataset": "postgres",
-                            "datasource": {
-                                "type": "grafana-postgresql-datasource",
-                                "uid": "postgres"
+                        ],
+                        "groupBy": [
+                            {
+                                "property": {
+                                    "type": "string"
+                                },
+                                "type": "groupBy"
+                            }
+                        ],
+                        "limit": 50
+                    }
+                }
+            ],
+            "title": "활성/대기/비활성화 커넥션 수",
+            "type": "piechart"
+        },
+        {
+            "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "postgres"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "percentage",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": 0
                             },
-                            "editorMode": "code",
-                            "format": "table",
-                            "rawQuery": true,
-                            "rawSql": "select mode, count(*) as cnt\r\nfrom pg_locks\r\ngroup by mode\r\norder by cnt desc;",
-                            "refId": "A",
-                            "sql": {
-                                "columns": [
-                                    {
-                                        "parameters": [],
-                                        "type": "function"
-                                    }
-                                ],
-                                "groupBy": [
-                                    {
-                                        "property": {
-                                            "type": "string"
-                                        },
-                                        "type": "groupBy"
-                                    }
-                                ],
-                                "limit": 50
+                            {
+                                "color": "orange",
+                                "value": 70
+                            },
+                            {
+                                "color": "red",
+                                "value": 85
                             }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 7,
+                "x": 7,
+                "y": 15
+            },
+            "id": 9,
+            "options": {
+                "minVizHeight": 75,
+                "minVizWidth": 75,
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [],
+                    "fields": "",
+                    "values": true
+                },
+                "showThresholdLabels": false,
+                "showThresholdMarkers": true,
+                "sizing": "auto"
+            },
+            "pluginVersion": "12.2.0",
+            "targets": [
+                {
+                    "dataset": "postgres",
+                    "datasource": {
+                        "type": "grafana-postgresql-datasource",
+                        "uid": "postgres"
+                    },
+                    "editorMode": "code",
+                    "format": "table",
+                    "rawQuery": true,
+                    "rawSql": "select mode, count(*) as cnt\r\nfrom pg_locks\r\ngroup by mode\r\norder by cnt desc;",
+                    "refId": "A",
+                    "sql": {
+                        "columns": [
+                            {
+                                "parameters": [],
+                                "type": "function"
+                            }
+                        ],
+                        "groupBy": [
+                            {
+                                "property": {
+                                    "type": "string"
+                                },
+                                "type": "groupBy"
+                            }
+                        ],
+                        "limit": 50
+                    }
+                }
+            ],
+            "title": "락 종류별 세션",
+            "type": "gauge"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "description": "“Spring Boot Actuator가 노출하는 HikariCP 커넥션 풀 상태를 시계열로 표시합니다. active/pending/idle/max 값을 통해 풀 고갈 여부와 대기열을 확인할 수 있습니다.”\n\nhikaricp_connections_active\n“현재 사용 중인 커넥션 수”\nhikaricp_connections_pending\n“커넥션을 기다리는 요청 수(대기열)”\nhikaricp_connections_idle\n“유휴 상태의 커넥션 수”\nhikaricp_connections_max\n“풀의 최대 커넥션 수”",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisBorderShow": false,
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "barWidthFactor": 0.6,
+                        "drawStyle": "line",
+                        "fillOpacity": 0,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "insertNulls": false,
+                        "lineInterpolation": "linear",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "auto",
+                        "showValues": false,
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
                         }
-                    ],
-                    "title": "락 종류별 세션",
-                    "type": "gauge"
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": 0
+                            },
+                            {
+                                "color": "red",
+                                "value": 80
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 9,
+                "x": 14,
+                "y": 15
+            },
+            "id": 10,
+            "options": {
+                "legend": {
+                    "calcs": [],
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "hideZeros": false,
+                    "mode": "single",
+                    "sort": "none"
+                }
+            },
+            "pluginVersion": "12.2.0",
+            "targets": [
+                {
+                    "editorMode": "code",
+                    "expr": "hikaricp_connections_active",
+                    "legendFormat": "hikaricp_connections_active",
+                    "range": true,
+                    "refId": "A"
                 },
                 {
                     "datasource": {
                         "type": "prometheus",
                         "uid": "prometheus"
                     },
-                    "description": "“Spring Boot Actuator가 노출하는 HikariCP 커넥션 풀 상태를 시계열로 표시합니다. active/pending/idle/max 값을 통해 풀 고갈 여부와 대기열을 확인할 수 있습니다.”\n\nhikaricp_connections_active\n“현재 사용 중인 커넥션 수”\nhikaricp_connections_pending\n“커넥션을 기다리는 요청 수(대기열)”\nhikaricp_connections_idle\n“유휴 상태의 커넥션 수”\nhikaricp_connections_max\n“풀의 최대 커넥션 수”",
-                    "fieldConfig": {
-                        "defaults": {
-                            "color": {
-                                "mode": "palette-classic"
-                            },
-                            "custom": {
-                                "axisBorderShow": false,
-                                "axisCenteredZero": false,
-                                "axisColorMode": "text",
-                                "axisLabel": "",
-                                "axisPlacement": "auto",
-                                "barAlignment": 0,
-                                "barWidthFactor": 0.6,
-                                "drawStyle": "line",
-                                "fillOpacity": 0,
-                                "gradientMode": "none",
-                                "hideFrom": {
-                                    "legend": false,
-                                    "tooltip": false,
-                                    "viz": false
-                                },
-                                "insertNulls": false,
-                                "lineInterpolation": "linear",
-                                "lineWidth": 1,
-                                "pointSize": 5,
-                                "scaleDistribution": {
-                                    "type": "linear"
-                                },
-                                "showPoints": "auto",
-                                "showValues": false,
-                                "spanNulls": false,
-                                "stacking": {
-                                    "group": "A",
-                                    "mode": "none"
-                                },
-                                "thresholdsStyle": {
-                                    "mode": "off"
-                                }
-                            },
-                            "mappings": [],
-                            "thresholds": {
-                                "mode": "absolute",
-                                "steps": [
-                                    {
-                                        "color": "green",
-                                        "value": 0
-                                    },
-                                    {
-                                        "color": "red",
-                                        "value": 80
-                                    }
-                                ]
-                            }
-                        },
-                        "overrides": []
+                    "editorMode": "code",
+                    "expr": " hikaricp_connections_pending",
+                    "hide": false,
+                    "instant": false,
+                    "legendFormat": " hikaricp_connections_pending",
+                    "range": true,
+                    "refId": "B"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
                     },
-                    "gridPos": {
-                        "h": 8,
-                        "w": 9,
-                        "x": 14,
-                        "y": 15
+                    "editorMode": "code",
+                    "expr": "hikaricp_connections_idle",
+                    "hide": false,
+                    "instant": false,
+                    "legendFormat": "hikaricp_connections_idle",
+                    "range": true,
+                    "refId": "C"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
                     },
-                    "id": 10,
-                    "options": {
-                        "legend": {
-                            "calcs": [],
-                            "displayMode": "list",
-                            "placement": "bottom",
-                            "showLegend": true
-                        },
-                        "tooltip": {
-                            "hideZeros": false,
-                            "mode": "single",
-                            "sort": "none"
-                        }
-                    },
-                    "pluginVersion": "12.2.0",
-                    "targets": [
-                        {
-                            "editorMode": "code",
-                            "expr": "hikaricp_connections_active",
-                            "legendFormat": "hikaricp_connections_active",
-                            "range": true,
-                            "refId": "A"
-                        },
-                        {
-                            "datasource": {
-                                "type": "prometheus",
-                                "uid": "prometheus"
-                            },
-                            "editorMode": "code",
-                            "expr": " hikaricp_connections_pending",
-                            "hide": false,
-                            "instant": false,
-                            "legendFormat": " hikaricp_connections_pending",
-                            "range": true,
-                            "refId": "B"
-                        },
-                        {
-                            "datasource": {
-                                "type": "prometheus",
-                                "uid": "prometheus"
-                            },
-                            "editorMode": "code",
-                            "expr": "hikaricp_connections_idle",
-                            "hide": false,
-                            "instant": false,
-                            "legendFormat": "hikaricp_connections_idle",
-                            "range": true,
-                            "refId": "C"
-                        },
-                        {
-                            "datasource": {
-                                "type": "prometheus",
-                                "uid": "prometheus"
-                            },
-                            "editorMode": "code",
-                            "expr": "hikaricp_connections_max",
-                            "hide": false,
-                            "instant": false,
-                            "legendFormat": "hikaricp_connections_max",
-                            "range": true,
-                            "refId": "D"
-                        }
-                    ],
-                    "title": "Actuator Metrics",
-                    "type": "timeseries"
+                    "editorMode": "code",
+                    "expr": "hikaricp_connections_max",
+                    "hide": false,
+                    "instant": false,
+                    "legendFormat": "hikaricp_connections_max",
+                    "range": true,
+                    "refId": "D"
                 }
             ],
-            "title": "DB Injection",
-            "type": "row"
+            "title": "Actuator Metrics",
+            "type": "timeseries"
         },
         {
             "datasource": {
@@ -919,7 +1042,7 @@
                 "h": 8,
                 "w": 12,
                 "x": 0,
-                "y": 15
+                "y": 23
             },
             "id": 11,
             "options": {
@@ -933,9 +1056,16 @@
                         "type": "tempo",
                         "uid": "tempo"
                     },
+                    "filters": [
+                        {
+                            "id": "38f419f4",
+                            "operator": "=",
+                            "scope": "span"
+                        }
+                    ],
                     "limit": 20,
                     "metricsQueryType": "range",
-                    "query": "{resource.service.name=\"matching_poc\" && name=\"match.scheduler.loop\" && duration > 500ms}",
+                    "query": "{resource.service.name=\"matching_poc\" && duration > 500ms}",
                     "queryType": "traceql",
                     "refId": "A",
                     "serviceMapUseNativeHistograms": false,
@@ -960,5 +1090,5 @@
     "timezone": "browser",
     "title": "동시성 테스트용 대시보드",
     "uid": "ad76f6w",
-    "version": 4
+    "version": 6
 }

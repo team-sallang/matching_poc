@@ -16,8 +16,8 @@
 | `matching_rule.md` | 매칭 알고리즘 단계별 규칙 (Phase 1~5 조건) |
 | `user_score_rule.md` | 사용자 점수(Tier) 산정 규칙 |
 | `category.md` | 취미/카테고리 분류 목록 |
-| `concurrency_testing.md` | 동시성 테스트 설계 및 결과 기록 |
-| `concurrency_testing_checklist.md` | 동시성 테스트 체크리스트 |
+| `concurrency_testing_checklist.md` | 동시성 테스트 체크리스트 및 실행 가이드 |
+| `matching_structure.md` | 매칭 서비스 전체 구조 (아키텍처·흐름·Phase·동시성·모니터링 Mermaid 다이어그램) |
 
 ## For AI Agents
 

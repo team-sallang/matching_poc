@@ -41,3 +41,13 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Tool-specific (local only) ###
+.bloop/
+.cursor/
+.gemini/
+.omc/
+.claude/
+
+### k6 generated test data ###
+k6/users_rows.csv

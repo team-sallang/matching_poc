@@ -54,11 +54,7 @@ services:
     env_file:
       - .env
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3100/ready || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+      disable: true  # distroless 이미지: sh/wget 없음, 외부 curl로 확인 가능
     deploy:
       restart_policy:
         condition: any
@@ -70,13 +66,13 @@ services:
       - ./tempo-config.yml:/etc/tempo/tempo.yml
       - tempo-data:/var/tempo
     ports:
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
-      - "3200:3200"   # Tempo HTTP
+      - "14317:4317"   # OTLP gRPC (Windows 예약 포트 4240-4339 회피)
+      - "14318:4318"   # OTLP HTTP (Windows 예약 포트 4240-4339 회피)
+      - "3200:3200"    # Tempo HTTP
     networks:
       - app-tier
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3200/ready || exit 1"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3200/ready"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -102,7 +98,7 @@ services:
       prometheus:
         condition: service_healthy
       loki:
-        condition: service_healthy
+        condition: service_started
     networks:
       - app-tier
     deploy:
