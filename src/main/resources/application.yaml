@@ -36,7 +36,7 @@ management:
       probability: 1.0
   otlp:
     tracing:
-      endpoint: ${OTLP_ENDPOINT:http://localhost:4318/v1/traces} # 앱이 localhost에서 실행되는 경우 기본값 설정
+      endpoint: ${OTLP_ENDPOINT} # Windows 예약 포트(4240-4339) 회피: 14318 사용
       transport: HTTP
   prometheus:
     metrics:
