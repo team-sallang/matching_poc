@@ -51,6 +51,9 @@ out/
 
 ### k6 generated test data ###
 k6/users_rows.csv
+k6/*.zip
+k6/*.exe
+k6/k6-v*/
 
 ### Local environment overrides ###
 .env.local

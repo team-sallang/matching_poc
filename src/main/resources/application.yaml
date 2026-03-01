@@ -1,3 +1,10 @@
+server:
+  tomcat:
+    accept-count: 1000    # TCP backlog (기본 100 → 1000 VU 동시 부하 테스트용)
+    max-connections: 2000 # 동시 연결 최대 수 (기본 8192, 명시)
+    threads:
+      max: 400            # 워커 스레드 (기본 200 → 1000 VU 큐잉 처리 향상)
+
 spring:
   application:
     name: matching_poc
